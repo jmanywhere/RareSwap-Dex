@@ -4,12 +4,11 @@
     Instagram:
     Twitter: 
     Telegram: 
-    Contract Version: 1.2
+    Contract Version: 0.1
     removed safemath
     fixed storage
     fixed swc
-fixed additional issues 
-building testcases
+
 
 */
 //SPDX-License-Identifier: UNLICENSED
@@ -1051,6 +1050,8 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
             WETH
         );
 
+        lossless = ILssController(0xDBB5125CEEaf7233768c84A5dF570AeECF0b4634); // BSC Controller
+
         // Set base token in the pair as WETH, which acts as the tax token
         //IRARESwapPair(rareSwapPair).setBaseToken(WETH);
         //IRARESwapPair(rareSwapPair).updateTotalFee(_marketingFee + _antiquitiesFee + _gasFee);
@@ -1107,7 +1108,12 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         address sender,
         address recipient,
         uint256 amount
-    ) public override returns (bool) {
+    )
+        public
+        override
+        lssTransferFrom(sender, recipient, amount)
+        returns (bool)
+    {
         _transfer(sender, recipient, amount);
         _approve(
             sender,
@@ -1225,15 +1231,18 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     function includeInFee(address account) public onlyOwner {
         require(account != address(0), "includeInFee: ZERO");
         require(_isExcludedFromFee[account], "Account is already included");
+        _isExcludedFromFee[account] = false;
         emit AuditLog("We have Updated the includeInFee:", account);
     }
 
     function setMarketingWallet(address walletAddress) public onlyOwner {
+        require(walletAddress != address(0), "includeInFee: ZERO");
         marketingWallet = walletAddress;
         emit AuditLog("We have Updated the setMarketingWallet:", walletAddress);
     }
 
     function setAntiquitiesWallet(address walletAddress) public onlyOwner {
+        require(walletAddress != address(0), "includeInFee: ZERO");
         antiquitiesWallet = walletAddress;
         emit AuditLog(
             "We have Updated the setAntiquitiesWallet:",
@@ -1242,6 +1251,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     }
 
     function setGasWallet(address walletAddress) public onlyOwner {
+        require(walletAddress != address(0), "includeInFee: ZERO");
         gasWallet = walletAddress;
         emit AuditLog("We have Updated the gasWallet:", walletAddress);
     }
@@ -1361,7 +1371,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
             uint256 tFee
         )
     {
-        (tTransferAmount, tFee) = _getTValues(tAmount);
+        (tFee, tTransferAmount) = _getTValues(tAmount);
         (rAmount, rTransferAmount, rFee) = _getRValues(
             tAmount,
             tFee,
@@ -1484,7 +1494,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         bool takeFee
     ) private {
         if (!canTrade) {
-            require(sender == owner()); // only owner allowed to trade or add liquidity
+            require(sender == owner(), "Trade disabled"); // only owner allowed to trade or add liquidity
         }
 
         if (botWallets[sender] || botWallets[recipient]) {
