@@ -55,12 +55,9 @@ abstract contract ERC2771Context is Context {
         _trustedForwarder = trustedForwarder;
     }
 
-    function isTrustedForwarder(address forwarder)
-        public
-        view
-        virtual
-        returns (bool)
-    {
+    function isTrustedForwarder(
+        address forwarder
+    ) public view virtual returns (bool) {
         return forwarder == _trustedForwarder;
     }
 
@@ -115,10 +112,10 @@ interface IERC20 {
 
     function balanceOf(address owner) external view returns (uint256);
 
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 
     function approve(address spender, uint256 value) external returns (bool);
 
@@ -134,10 +131,10 @@ interface IERC20 {
 interface IWETH {
     function balanceOf(address owner) external view returns (uint256);
 
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 
     function deposit() external payable;
 
@@ -235,10 +232,10 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCall(address target, bytes memory data)
-        internal
-        returns (bytes memory)
-    {
+    function functionCall(
+        address target,
+        bytes memory data
+    ) internal returns (bytes memory) {
         return
             functionCallWithValue(
                 target,
@@ -321,11 +318,10 @@ library Address {
      *
      * _Available since v3.3._
      */
-    function functionStaticCall(address target, bytes memory data)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function functionStaticCall(
+        address target,
+        bytes memory data
+    ) internal view returns (bytes memory) {
         return
             functionStaticCall(
                 target,
@@ -361,10 +357,10 @@ library Address {
      *
      * _Available since v3.4._
      */
-    function functionDelegateCall(address target, bytes memory data)
-        internal
-        returns (bytes memory)
-    {
+    function functionDelegateCall(
+        address target,
+        bytes memory data
+    ) internal returns (bytes memory) {
         return
             functionDelegateCall(
                 target,
@@ -436,10 +432,10 @@ library Address {
         }
     }
 
-    function _revert(bytes memory returndata, string memory errorMessage)
-        private
-        pure
-    {
+    function _revert(
+        bytes memory returndata,
+        string memory errorMessage
+    ) private pure {
         // Look for revert reason and bubble it up if present
         if (returndata.length > 0) {
             // The easiest way to bubble the revert reason is using memory via assembly
@@ -524,10 +520,10 @@ interface IRARESwapFactory {
 
     function feeToSetter() external view returns (address);
 
-    function getPair(address tokenA, address tokenB)
-        external
-        view
-        returns (address pair);
+    function getPair(
+        address tokenA,
+        address tokenB
+    ) external view returns (address pair);
 
     function allPairs(uint256) external view returns (address pair);
 
@@ -535,9 +531,10 @@ interface IRARESwapFactory {
 
     function pairExist(address pair) external view returns (bool);
 
-    function createPair(address tokenA, address tokenB)
-        external
-        returns (address pair);
+    function createPair(
+        address tokenA,
+        address tokenB
+    ) external returns (address pair);
 
     function setFeeTo(address) external;
 
@@ -570,10 +567,10 @@ interface IRARESwapPair {
 
     function balanceOf(address owner) external view returns (uint256);
 
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 
     function updateTotalFee(uint256 totalFee) external returns (bool);
 
@@ -646,9 +643,9 @@ interface IRARESwapPair {
 
     function mint(address to) external returns (uint256 liquidity);
 
-    function burn(address to)
-        external
-        returns (uint256 amount0, uint256 amount1);
+    function burn(
+        address to
+    ) external returns (uint256 amount0, uint256 amount1);
 
     function swap(
         uint256 amount0Out,
@@ -682,13 +679,7 @@ interface IRARESwapRouter01 {
         uint256 amountBMin,
         address to,
         uint256 deadline
-    )
-        external
-        returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 liquidity
-        );
+    ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
 
     function addLiquidityETH(
         address token,
@@ -700,11 +691,7 @@ interface IRARESwapRouter01 {
     )
         external
         payable
-        returns (
-            uint256 amountToken,
-            uint256 amountETH,
-            uint256 liquidity
-        );
+        returns (uint256 amountToken, uint256 amountETH, uint256 liquidity);
 
     function removeLiquidity(
         address tokenA,
@@ -816,15 +803,15 @@ interface IRARESwapRouter01 {
         uint256 reserveOut
     ) external pure returns (uint256 amountIn);
 
-    function getAmountsOut(uint256 amountIn, address[] calldata path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function getAmountsOut(
+        uint256 amountIn,
+        address[] calldata path
+    ) external view returns (uint256[] memory amounts);
 
-    function getAmountsIn(uint256 amountOut, address[] calldata path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function getAmountsIn(
+        uint256 amountOut,
+        address[] calldata path
+    ) external view returns (uint256[] memory amounts);
 }
 
 interface IRARESwapRouter is IRARESwapRouter01 {
@@ -895,14 +882,15 @@ interface ILERC20 {
 
     function balanceOf(address _account) external view returns (uint256);
 
-    function transfer(address _recipient, uint256 _amount)
-        external
-        returns (bool);
+    function transfer(
+        address _recipient,
+        uint256 _amount
+    ) external returns (bool);
 
-    function allowance(address _owner, address _spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address _owner,
+        address _spender
+    ) external view returns (uint256);
 
     function approve(address _spender, uint256 _amount) external returns (bool);
 
@@ -912,13 +900,15 @@ interface ILERC20 {
         uint256 _amount
     ) external returns (bool);
 
-    function increaseAllowance(address _spender, uint256 _addedValue)
-        external
-        returns (bool);
+    function increaseAllowance(
+        address _spender,
+        uint256 _addedValue
+    ) external returns (bool);
 
-    function decreaseAllowance(address _spender, uint256 _subtractedValue)
-        external
-        returns (bool);
+    function decreaseAllowance(
+        address _spender,
+        uint256 _subtractedValue
+    ) external returns (bool);
 
     function transferOutBlacklistedFunds(address[] calldata _from) external;
 
@@ -964,7 +954,10 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     mapping(address => bool) private _isExcludedFromFee;
 
     mapping(address => bool) private _isExcluded;
-    address[] private _excluded;
+
+    // Exclusion amounts
+    uint private excludedT;
+    uint private excludedR;
 
     mapping(address => bool) private botWallets;
     bool public botsCantrade = false;
@@ -1076,30 +1069,25 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return tokenFromReflection(_rOwned[account]);
     }
 
-    function transfer(address recipient, uint256 amount)
-        public
-        override
-        lssTransfer(recipient, amount)
-        returns (bool)
-    {
+    function transfer(
+        address recipient,
+        uint256 amount
+    ) public override lssTransfer(recipient, amount) returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    function allowance(address _owner, address spender)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function allowance(
+        address _owner,
+        address spender
+    ) public view override returns (uint256) {
         return _allowances[_owner][spender];
     }
 
-    function approve(address spender, uint256 amount)
-        public
-        override
-        returns (bool)
-    {
+    function approve(
+        address spender,
+        uint256 amount
+    ) public override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
@@ -1124,11 +1112,10 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     }
 
     //ERC 20 Standard increase Allowance
-    function increaseAllowance(address spender, uint256 addedValue)
-        public
-        virtual
-        returns (bool)
-    {
+    function increaseAllowance(
+        address spender,
+        uint256 addedValue
+    ) public virtual returns (bool) {
         _approve(
             _msgSender(),
             spender,
@@ -1138,11 +1125,10 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     }
 
     //ERC 20 Standard decrease Allowance
-    function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
-        virtual
-        returns (bool)
-    {
+    function decreaseAllowance(
+        address spender,
+        uint256 subtractedValue
+    ) public virtual returns (bool) {
         _approve(
             _msgSender(),
             spender,
@@ -1171,21 +1157,18 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         _tFeeTotal = _tFeeTotal + tAmount;
     }
 
-    function reflectionFromToken(uint256 tAmount, bool deductTransferFee)
-        public
-        view
-        returns (uint256)
-    {
+    function reflectionFromToken(
+        uint256 tAmount,
+        bool deductTransferFee
+    ) public view returns (uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
         (uint256 rAmount, uint256 rTransferAmount, , , ) = _getValues(tAmount);
         return deductTransferFee ? rTransferAmount : rAmount;
     }
 
-    function tokenFromReflection(uint256 rAmount)
-        public
-        view
-        returns (uint256)
-    {
+    function tokenFromReflection(
+        uint256 rAmount
+    ) public view returns (uint256) {
         require(
             rAmount <= _rTotal,
             "Amount must be less than total reflections"
@@ -1201,21 +1184,9 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
         }
         _isExcluded[account] = true;
-        _excluded.push(account);
+        excludedT += _tOwned[account];
+        excludedR += _rOwned[account];
     }
-
-    // function includeInReward(address account) external onlyOwner {
-    //     require(_isExcluded[account], "Account is already excluded");
-    //     for (uint256 i = 0; i < _excluded.length; i++) {
-    //         if (_excluded[i] == account) {
-    //             _excluded[i] = _excluded[_excluded.length - 1];
-    //             _tOwned[account] = 0;
-    //             _isExcluded[account] = false;
-    //             _excluded.pop();
-    //             break;
-    //         }
-    //     }
-    // }
 
     function _updatePairsFee(uint256 fee) internal {
         IRARESwapPair(rareSwapPair).updateTotalFee(fee);
@@ -1261,7 +1232,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
             amount >= 2500000000,
             "ERR: max wallet amount should exceed 0.5% of the supply"
         );
-        _maxWallet = amount * 10**9;
+        _maxWallet = amount * 10 ** 9;
 
         emit Log("We have set a new max wallet amount:", amount);
     }
@@ -1271,7 +1242,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
             amount >= 2500000000,
             "ERR: max tx amount should exceed 0.5% of the supply"
         );
-        _maxTxAmount = amount * 10**9;
+        _maxTxAmount = amount * 10 ** 9;
         emit Log("We have changed the Max Transfer Amount:", amount);
     }
 
@@ -1360,7 +1331,9 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         _tFeeTotal = _tFeeTotal + tFee;
     }
 
-    function _getValues(uint256 tAmount)
+    function _getValues(
+        uint256 tAmount
+    )
         private
         view
         returns (
@@ -1380,11 +1353,9 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
     }
 
-    function _getTValues(uint256 tAmount)
-        private
-        view
-        returns (uint256 tFee, uint256 tTransferAmount)
-    {
+    function _getTValues(
+        uint256 tAmount
+    ) private view returns (uint256 tFee, uint256 tTransferAmount) {
         tFee = calculateTaxFee(tAmount);
         tTransferAmount = tAmount - tFee;
     }
@@ -1396,11 +1367,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     )
         private
         pure
-        returns (
-            uint256 rAmount,
-            uint256 rTransferAmount,
-            uint256 rFee
-        )
+        returns (uint256 rAmount, uint256 rTransferAmount, uint256 rFee)
     {
         rAmount = tAmount * currentRate;
         rFee = tFee * currentRate;
@@ -1415,20 +1382,18 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     function _getCurrentSupply() private view returns (uint256, uint256) {
         uint256 rSupply = _rTotal;
         uint256 tSupply = _tTotal;
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (
-                _rOwned[_excluded[i]] > rSupply ||
-                _tOwned[_excluded[i]] > tSupply
-            ) return (_rTotal, _tTotal);
-            rSupply = rSupply - _rOwned[_excluded[i]];
-            tSupply = tSupply - _tOwned[_excluded[i]];
-        }
+        if (excludedR > rSupply || excludedT > tSupply)
+            return (_rTotal, _tTotal);
+
+        rSupply = rSupply - excludedR;
+        tSupply = tSupply - excludedT;
+
         if (rSupply < _rTotal / _tTotal) return (_rTotal, _tTotal);
         return (rSupply, tSupply);
     }
 
     function calculateTaxFee(uint256 _amount) private view returns (uint256) {
-        return (_amount * _taxFee) / 10**4;
+        return (_amount * _taxFee) / 10 ** 4;
     }
 
     function removeAllFee() private {
@@ -1445,11 +1410,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return _isExcludedFromFee[account];
     }
 
-    function _approve(
-        address _owner,
-        address spender,
-        uint256 amount
-    ) private {
+    function _approve(address _owner, address spender, uint256 amount) private {
         require(_owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
@@ -1457,11 +1418,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         emit Approval(_owner, spender, amount);
     }
 
-    function _transfer(
-        address from,
-        address to,
-        uint256 amount
-    ) private {
+    function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
         if (from != owner() && to != owner())
@@ -1639,10 +1596,10 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
      * @param   candidate new admin proposed address
      * @param   keyHash Key to accept
      */
-    function transferRecoveryAdminOwnership(address candidate, bytes32 keyHash)
-        external
-        onlyOwner
-    {
+    function transferRecoveryAdminOwnership(
+        address candidate,
+        bytes32 keyHash
+    ) external onlyOwner {
         recoveryAdminCandidate = candidate;
         recoveryAdminKeyHash = keyHash;
         emit NewRecoveryAdminProposal(candidate);
