@@ -1003,7 +1003,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     bytes32 private recoveryAdminKeyHash;
     uint256 public timelockPeriod = 30 days;
     uint256 public losslessTurnOffTimestamp;
-    bool public isLosslessOn = true;
+    bool public isLosslessOn = false;
     ILssController public lossless;
 
     modifier onlyExchange() {
@@ -1030,34 +1030,42 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         antiquitiesWallet = _antiquitiesWallet;
         gasWallet = _gasWallet;
 
-        // This is for BSC - double check the address since this one may not be the correct one
+        // Setup router
         rareSwapRouter = IRARESwapRouter(
             0x027bC3A29990aAED16F65a08C8cc3A92E0AFBAA4
-        ); //RareSwap Router 0x027bC3A29990aAED16F65a08C8cc3A92E0AFBAA4
+        );
         WETH = rareSwapRouter.WETH();
-
-        // Create a uniswap pair for this new token
-
+        // Create the pair
         rareSwapPair = IRARESwapFactory(rareSwapRouter.factory()).createPair(
             address(this),
             WETH
         );
-
-        lossless = ILssController(0xDBB5125CEEaf7233768c84A5dF570AeECF0b4634); // BSC Controller
-
         // Set base token in the pair as WETH, which acts as the tax token
-        //IRARESwapPair(rareSwapPair).setBaseToken(WETH);
-        //IRARESwapPair(rareSwapPair).updateTotalFee(_marketingFee + _antiquitiesFee + _gasFee);
-
-        //_approve(_msgSender(), address(rareSwapRouter), _tTotal);
+        IRARESwapPair(rareSwapPair).setBaseToken(WETH);
+        IRARESwapPair(rareSwapPair).updateTotalFee(
+            _marketingFee + _antiquitiesFee + _gasFee
+        );
 
         depWallet = 0x611980Ea951D956Bd04C39A5A176EaB35EB93982;
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         _isExcludedFromFee[depWallet] = true;
+        _isExcludedFromFee[gasWallet] = true;
+        _isExcludedFromFee[marketingWallet] = true;
+        _isExcludedFromFee[antiquitiesWallet] = true;
 
         emit Transfer(address(0), _msgSender(), _tTotal);
+    }
+
+    function setMaxWalletAmount(uint256 amount) external onlyOwner {
+        require(
+            amount > 2_500_000_000,
+            "ERR: max wallet amount should exceed 0.5% of the supply"
+        );
+        _maxWallet = amount * 10 ** 9;
+
+        emit Log("New max wallet amount:", amount);
     }
 
     function totalSupply() public view override returns (uint256) {
@@ -1227,23 +1235,13 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         emit AuditLog("We have Updated the gasWallet:", walletAddress);
     }
 
-    function _setMaxWalletAmount(uint256 amount) external onlyOwner {
-        require(
-            amount >= 2500000000,
-            "ERR: max wallet amount should exceed 0.5% of the supply"
-        );
-        _maxWallet = amount * 10 ** 9;
-
-        emit Log("We have set a new max wallet amount:", amount);
-    }
-
     function setMaxTxAmount(uint256 amount) external onlyOwner {
         require(
-            amount >= 2500000000,
+            amount >= 2_500_000_000,
             "ERR: max tx amount should exceed 0.5% of the supply"
         );
         _maxTxAmount = amount * 10 ** 9;
-        emit Log("We have changed the Max Transfer Amount:", amount);
+        emit Log("New Max Transfer Amount:", amount);
     }
 
     function clearStuckBalance() public {
@@ -1577,6 +1575,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         );
 
         lossless = ILssController(_controller);
+        if (!isLosslessOn) isLosslessOn = true;
     }
 
     /**
