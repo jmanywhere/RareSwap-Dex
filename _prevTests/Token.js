@@ -37,18 +37,9 @@ describe("TheRareAntiquitiesTokenLtd contract", function () {
   // loadFixture to run this setup once, snapshot that state, and reset Hardhat
   // Network to that snapshot in every test.
   beforeEach(async function () {
-    const Token = await ethers.getContractFactory("TheRareAntiquitiesTokenLtd");
-    accounts = await ethers.getSigners();
-    owner = accounts[0];
-    addr1 = accounts[1];
-    if (!deployed) {
-      rareToken = await Token.deploy("0x2B60d7683d4eD48A93B2cEF198959fFC956Fa452", "0x4CcEE09FDd72c4CbAB6f4D27d2060375B27cD314", "0x1626e068F452B018bC583590E67D6A0E5e8d2b5e");
-      await rareToken.deployed();
-      deployed = true;
-    }
-
-    // rareToken = await ethers.getContractAt("TheRareAntiquitiesTokenLtd", "0xc50D5be3A5c18534ad87b26c414B26839797bDC4");
-    canTrade = await rareToken.canTrade();
+    addrs = await setupAddresses();
+    rareToken = await deployRareToken();
+    await rareToken.connect(addrs.owner).EnableTrading()
   });
 
   // You can nest describe calls to create subsections.

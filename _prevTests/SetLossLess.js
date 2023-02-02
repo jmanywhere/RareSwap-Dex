@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { setupAddresses, deployRareToken, getRareToken } = require("./utils");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers")
 
 let addrs;
 let rareToken;
@@ -10,12 +11,16 @@ function increaseTime(ms) {
 }
 
 describe("Set LossLess", function () {
-  beforeEach(async function () {
+  
+  async function tokenFixture() {
     addrs = await setupAddresses();
     rareToken = await deployRareToken();
-  });
+    await rareToken.connect(addrs.owner).EnableTrading()
+    return { addrs, rareToken }
+  }
 
   describe("Set LossLess Controller", () => {
+    const { addrs, rareToken } = loadFixture(tokenFixture)
     describe("when sender is not owner", () => {
       it("should revert", async () => {
         await expect(rareToken.connect(addrs.addr1).setLosslessController(addrs.losslessV2Controller)).to.be.revertedWith("Ownable: caller is not the owner")
@@ -37,6 +42,8 @@ describe("Set LossLess", function () {
   })
 
   describe("Set LossLess Admin", () => {
+    const { addrs, rareToken } = loadFixture(tokenFixture)
+    
     describe("when sender is not owner", () => {
       it("should revert", async () => {
         await expect(rareToken.connect(addrs.addr1).setLosslessAdmin(addrs.losslessAdmin)).to.be.revertedWith("Ownable: caller is not the owner")
@@ -53,6 +60,7 @@ describe("Set LossLess", function () {
   })
 
   describe("Set Recovery Admin", () => {
+    const { addrs, rareToken } = loadFixture(tokenFixture)
     describe("when sender is not owner", () => {
       it("should revert", async () => {
 

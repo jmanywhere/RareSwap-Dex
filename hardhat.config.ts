@@ -1,18 +1,19 @@
-require("@nomicfoundation/hardhat-toolbox");
-require('hardhat-contract-sizer');
+import "@nomicfoundation/hardhat-toolbox";
+import 'hardhat-contract-sizer';
 
 // The next line is part of the sample project, you don't need it in your
 // project. It imports a Hardhat task definition, that can be used for
 // testing the frontend.
 // require("./tasks/faucet");
-const dotenv = require("dotenv")
+import dotenv from "dotenv";
+import { HardhatUserConfig } from "hardhat/types";
 
 dotenv.config();
 
-const privateKeys = process.env.PRIVATE_KEY.split(" ") ;
+const privateKeys = process.env.PRIVATE_KEY?.split(" ") ;
 
 /** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
+const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
@@ -44,3 +45,5 @@ module.exports = {
     }
   },
 };
+
+export default config;

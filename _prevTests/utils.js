@@ -48,6 +48,7 @@ const setupAddresses = async () => {
 const deployRareToken = async () => {
     const rareContract = await ethers.getContractFactory("TheRareAntiquitiesTokenLtd")
     rareToken = await rareContract.deploy(marketingWallet, antiquitiesWallet, gasWallet, forwardWallet)
+    await rareToken.deployed()
     return rareToken
 }
 
