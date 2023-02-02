@@ -18,7 +18,11 @@ describe("Token contract", function () {
 
         await token.connect(owner).transfer(user1.address, ethers.utils.parseUnits("5000", "gwei"))
 
-        return { token, owner, user1, user2, user3, marketing, antiques, gas, trusted, recoveryAdmin, losslessV2Controller, losslessAdmin, keyHash, key, maxAmount, botWallet };
+        const routerInstance = await ethers.getContractAt("IRARESwapRouter", await token.rareSwapRouter())
+        const pairFactory = await ethers.getContractAt("IRARESwapFactory", await routerInstance.factory())
+        const pairInstance = await ethers.getContractAt("IRARESwapPair", await token.rareSwapPair())
+
+        return { token, owner, user1, user2, user3, marketing, antiques, gas, trusted, recoveryAdmin, losslessV2Controller, losslessAdmin, keyHash, key, maxAmount, botWallet, routerInstance, pairInstance, pairFactory };
     }
 
     describe("Deployment", function () {
@@ -209,16 +213,16 @@ describe("Token contract", function () {
       describe("Exclude From Reward", () => {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
-            const { token, user1, marketing } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).excludeFromReward(marketing.address)).to.be.revertedWith("Ownable: caller is not the owner")
+            const { token, user1, user2, } = await loadFixture(deployTokenFixture);
+            await expect(token.connect(user1).excludeFromReward(user2.address)).to.be.revertedWith("Ownable: caller is not the owner")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, marketing } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).excludeFromReward(marketing.address)
-            expect(await token.isExcludedFromReward(marketing.address)).to.be.equal(true)
+            const { token, owner, user2 } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).excludeFromReward(user2.address)
+            expect(await token.isExcludedFromReward(user2.address)).to.be.equal(true)
           })
         })
       })
@@ -327,7 +331,8 @@ describe("Token contract", function () {
             await token.connect(owner).EnableTrading()
             await token.connect(owner).excludeFromReward(user1.address);
             await token.connect(user1).transfer(user2.address, transferAmount);
-            expect(await token.balanceOf(user2.address)).to.be.greaterThan(totalTransferred);
+            
+            expect(await token.balanceOf(user2.address)).to.be.equal(totalTransferred);
             expect(await token.balanceOf(user1.address)).to.be.equal(transferAmount.mul(4));
           })
           it("should succeed to send funds to excluded", async () => {
@@ -360,6 +365,40 @@ describe("Token contract", function () {
 
         })
 
+      })
+    })
+
+    describe("Token with Router interactions", () => {
+
+      it("should have the pair created", async () => {
+        const { token, owner, routerInstance, pairFactory, pairInstance } = await loadFixture(deployTokenFixture);
+        
+        expect(await pairFactory.getPair(token.address, routerInstance.WETH())).to.be.equal(pairInstance.address)
+        
+      })
+      it("should add Liquidity", async () => {
+        const { token, owner, routerInstance, pairInstance } = await loadFixture(deployTokenFixture);
+        await token.connect(owner).EnableTrading()
+        await token.connect(owner).approve(routerInstance.address, ethers.constants.MaxUint256)
+        const initOwnerBalance = await ethers.provider.getBalance(owner.address)
+        await routerInstance.connect(owner).addLiquidityETH(token.address, ethers.utils.parseUnits("10000", "gwei"), ethers.utils.parseUnits("10000", "gwei"), ethers.utils.parseUnits("10000", "gwei"), owner.address, ethers.constants.MaxUint256, { value: ethers.utils.parseUnits("2", "ether") })
+        expect(await token.balanceOf(pairInstance.address)).to.be.equal(ethers.utils.parseUnits("10000", "gwei"))
+        // expect(await ethers.provider.getBalance(owner.address)).to.equal(initOwnerBalance.sub(ethers.utils.parseUnits("2", "ether")))
+        // Initial liquidity amount is actually calculated by the router, so we can't really test it
+        expect(await pairInstance.balanceOf(owner.address)).to.be.greaterThan(ethers.utils.parseUnits("10000", "gwei"))
+      })
+
+      it("should swap tokens for ETH", async () => {
+        const { token, owner, routerInstance, pairInstance } = await loadFixture(deployTokenFixture);
+        await token.connect(owner).EnableTrading()
+        await token.connect(owner).approve(routerInstance.address, ethers.constants.MaxUint256)
+        await routerInstance.connect(owner).addLiquidityETH(token.address, ethers.utils.parseUnits("50000000000", "gwei"), ethers.utils.parseUnits("10000", "gwei"), ethers.utils.parseUnits("10000", "gwei"), owner.address, ethers.constants.MaxUint256, { value: ethers.utils.parseUnits("20", "ether") })
+        const ownerBalance = await ethers.provider.getBalance(owner.address)
+        console.log({
+          aprox: await routerInstance.getAmountsOut(ethers.utils.parseUnits("100000000", "gwei"), [token.address, routerInstance.WETH()]),
+        })
+        await routerInstance.connect(owner).swapExactTokensForETHSupportingFeeOnTransferTokens(ethers.utils.parseUnits("100000000", "gwei"), 0, [token.address, routerInstance.WETH()], owner.address, ethers.constants.MaxUint256)
+        expect(await ethers.provider.getBalance(owner.address)).to.be.greaterThan(ownerBalance)
       })
     })
 });
