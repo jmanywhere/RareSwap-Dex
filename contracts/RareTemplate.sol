@@ -1055,6 +1055,14 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         _isExcludedFromFee[marketingWallet] = true;
         _isExcludedFromFee[antiquitiesWallet] = true;
 
+        excludeFromReward(address(this));
+        excludeFromReward(depWallet);
+        excludeFromReward(gasWallet);
+        excludeFromReward(marketingWallet);
+        excludeFromReward(antiquitiesWallet);
+        excludeFromReward(rareSwapPair);
+        excludeFromReward(address(rareSwapRouter));
+
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
 
@@ -1476,11 +1484,17 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
             if (fromExcluded) {
                 _tOwned[sender] -= amount;
                 if (toExcluded) {
-                    _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
+                    _tOwned[recipient] += tTransferAmount;
+                } else {
+                    excludedR -= rAmount;
+                    excludedT -= tTransferAmount;
                 }
             } else {
-                if (toExcluded)
-                    _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
+                if (toExcluded) {
+                    _tOwned[recipient] += tTransferAmount;
+                    excludedR += rAmount;
+                    excludedT += tTransferAmount;
+                }
             }
             _reflectFee(rFee, tFee);
             emit Transfer(sender, recipient, tTransferAmount);
