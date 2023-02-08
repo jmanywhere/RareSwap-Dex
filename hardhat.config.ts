@@ -33,6 +33,7 @@ const config: HardhatUserConfig = {
       chainId: 1337, // We set 1337 to make interacting with MetaMask simpler
       forking: {
         url: "https://eth.public-rpc.com",
+        blockNumber: 15380054,
       }
     },
     goerli: {
