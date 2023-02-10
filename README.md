@@ -1,5 +1,7 @@
 # Hardhat Test
 
+As of this build 47 tests were made and 47 tests pass.
+
 ## Environment
 
 ### Requirement
@@ -11,7 +13,5 @@ Due to the use of Lossless and a Dex, tests have been run utilizing readily avai
 
 ### Config
 
-Run a hardhat network node forking ETH
-`npx hardhat node --fork https://eth.public-rpc.com`
-Then tests can be run normally:
-`npx hardhat test`
+Hardhat TEST:
+Local tests are run using a fork of ETH, which is configured on the `hardhat.config.ts` file.
