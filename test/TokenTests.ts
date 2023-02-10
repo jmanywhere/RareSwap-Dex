@@ -1,7 +1,13 @@
 import { expect } from "chai";
 import  hre, { ethers } from 'hardhat';
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 
+const LOSSLESS_ROLE = keccak256(toUtf8Bytes("LOSSLESS"));
+const WALLET_ROLE = keccak256(toUtf8Bytes("WALLET"));
+const BOT_ROLE = keccak256(toUtf8Bytes("BOT"));
+const MAX_ROLE = keccak256(toUtf8Bytes("MAX"));
+const FEE_ROLE = keccak256(toUtf8Bytes("FEE"));
 
 describe("Token contract", function () {
     async function deployTokenFixture() {
@@ -39,20 +45,22 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, losslessV2Controller } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setLosslessController(losslessV2Controller)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).setLosslessController(losslessV2Controller)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it('should revert when setting to zero address', async () => {
-            const { token, owner } = await loadFixture(deployTokenFixture);
+            const { token, owner, user1 } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(LOSSLESS_ROLE, user1.address)
             await expect(
-                token.connect(owner).setLosslessController('0x0000000000000000000000000000000000000000'),
+                token.connect(user1).setLosslessController('0x0000000000000000000000000000000000000000'),
               ).to.be.revertedWith('BridgeMintableToken: Controller cannot be zero address.');
             });
           it("should succeed", async () => {
-            const { token, owner, losslessV2Controller } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).setLosslessController(losslessV2Controller)
+            const { token, owner, user1, losslessV2Controller } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(LOSSLESS_ROLE, user1.address)
+            await token.connect(user1).setLosslessController(losslessV2Controller)
               expect(await token.lossless()).to.be.equal(losslessV2Controller)
           })
         })
@@ -64,14 +72,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, losslessAdmin, user1,  } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setLosslessAdmin(losslessAdmin)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).setLosslessAdmin(losslessAdmin)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, losslessAdmin } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).setLosslessAdmin(losslessAdmin)
+            const { token, owner, user1, losslessAdmin } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(LOSSLESS_ROLE, user1.address)
+            await token.connect(user1).setLosslessAdmin(losslessAdmin)
               expect(await token.admin()).to.be.equal(losslessAdmin)
           })
         })
@@ -83,14 +92,15 @@ describe("Token contract", function () {
           it("should revert", async () => {
             const { token, user1, recoveryAdmin, keyHash } = await loadFixture(deployTokenFixture);
     
-            await expect(token.connect(user1).transferRecoveryAdminOwnership(recoveryAdmin.address, keyHash)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).transferRecoveryAdminOwnership(recoveryAdmin.address, keyHash)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
       
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, recoveryAdmin, keyHash, key} = await loadFixture(deployTokenFixture);
-            await token.connect(owner).transferRecoveryAdminOwnership(recoveryAdmin.address, keyHash);
+            const { token, owner, user1, recoveryAdmin, keyHash, key} = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(LOSSLESS_ROLE, user1.address)
+            await token.connect(user1).transferRecoveryAdminOwnership(recoveryAdmin.address, keyHash);
             await token.connect(recoveryAdmin).acceptRecoveryAdminOwnership(key);
           })
         })
@@ -99,40 +109,66 @@ describe("Token contract", function () {
     })
 
     describe("Token Owner Functions", function () {
+
+      describe("Role Setter", () => {
+        it("should set the right role", async () => {
+          const { token, owner, user1 } = await loadFixture(deployTokenFixture);
+          await token.connect(owner).grantRole(LOSSLESS_ROLE,user1.address)
+          expect(await token.hasRole(LOSSLESS_ROLE, user1.address)).to.be.equal(true)
+        })
+
+        it("should revoke the right role", async () => {
+          const { token, owner, user1 } = await loadFixture(deployTokenFixture);
+          await token.connect(owner).grantRole(LOSSLESS_ROLE,user1.address)
+          expect(await token.getRoleMemberAmount(LOSSLESS_ROLE)).to.be.equal(1)
+          await token.connect(owner).revokeRole(LOSSLESS_ROLE,user1.address)
+          expect(await token.hasRole(LOSSLESS_ROLE, user1.address)).to.be.equal(false)
+          expect(await token.getRoleMemberAmount(LOSSLESS_ROLE)).to.be.equal(0)
+        })
+
+        it("should not allow self role granting" , async () => {
+          const { token, owner } = await loadFixture(deployTokenFixture);
+          await expect(token.connect(owner).grantRole(LOSSLESS_ROLE, owner.address)).to.be.revertedWith("SELF_GRANT")
+        })
+      })
     
       describe("Enable Trading", () => {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1 } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).EnableTrading()).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).enableTrading()).to.be.revertedWith("Ownable: caller is not the owner")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
             const { token, owner } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).EnableTrading()
+            await token.connect(owner).enableTrading()
             expect(await token.canTrade()).to.be.equal(true)
           })
         })
       })
     
       describe("Set Max Wallet Amount", () => {
-        describe("when sender is not owner", () => {
+        describe("when sender is not MAX", () => {
           it("should revert", async () => {
             const { token, user1, maxAmount } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setMaxWalletAmount(maxAmount)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).setMaxWalletAmount(maxAmount)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("wallet amount should exceed 0.5% of the supply", async () => {
-            const { token, owner, maxAmount } = await loadFixture(deployTokenFixture);
-            expect(token.connect(owner).setMaxWalletAmount(maxAmount)).to.be.revertedWith("ERR: max wallet amount should exceed 0.5% of the supply")
+            const { token, owner, user1, maxAmount } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(MAX_ROLE, user1.address)
+            expect( await token.hasRole(MAX_ROLE, user1.address)).to.be.equal(true)
+            expect( await token.getRoleMemberAmount(MAX_ROLE)).to.be.equal(1)
+            expect(token.connect(user1).setMaxWalletAmount(maxAmount)).to.be.revertedWith("ERR: max wallet amount should exceed 0.5% of the supply")
           })
           it("should succeed", async () => {
-            const { token, owner, maxAmount } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).setMaxWalletAmount((maxAmount.mul(2)))
+            const { token, owner, user1, maxAmount } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(MAX_ROLE, user1.address)
+            await token.connect(user1).setMaxWalletAmount((maxAmount.mul(2)))
             expect(await token._maxWallet()).to.be.equal(maxAmount.mul(2).mul(10**9))
           })
         })
@@ -142,18 +178,20 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, maxAmount } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setMaxTxAmount(maxAmount)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).setMaxTxAmount(maxAmount)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("wallet amount should exceed 0.5% of the supply", async () => {
-            const { token, owner, maxAmount } = await loadFixture(deployTokenFixture);
-            expect(token.connect(owner).setMaxTxAmount(maxAmount)).to.be.revertedWith("ERR: max wallet amount should exceed 0.5% of the supply")
+            const { token, owner, user1, maxAmount } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(MAX_ROLE, user1.address)
+            expect(token.connect(user1).setMaxTxAmount(maxAmount)).to.be.revertedWith("ERR: max wallet amount should exceed 0.5% of the supply")
           })
           it("should succeed", async () => {
-            const { token, owner, maxAmount } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).setMaxTxAmount(maxAmount.mul(2))
+            const { token, owner, user1, maxAmount } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(MAX_ROLE, user1.address)
+            await token.connect(user1).setMaxTxAmount(maxAmount.mul(2))
             expect(await token._maxTxAmount()).to.be.equal(maxAmount.mul(2).mul(10**9))
           })
         })
@@ -163,14 +201,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, botWallet } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).addBotWallet(botWallet)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).addBotWallet(botWallet)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, botWallet } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).addBotWallet(botWallet)
+            const { token, owner, user1, botWallet } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(BOT_ROLE, user1.address)
+            await token.connect(user1).addBotWallet(botWallet)
             expect(await token.getBotWalletStatus(botWallet)).to.be.equal(true)
           })
         })
@@ -180,14 +219,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, botWallet } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).removeBotWallet(botWallet)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).removeBotWallet(botWallet)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, botWallet } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).removeBotWallet(botWallet)
+            const { token, owner, user1, botWallet } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(BOT_ROLE, user1.address)
+            await token.connect(user1).removeBotWallet(botWallet)
             expect(await token.getBotWalletStatus(botWallet)).to.be.equal(false)
           })
         })
@@ -197,14 +237,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, user2 } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).excludeFromFee(user2.address)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).excludeFromFee(user2.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, user2 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).excludeFromFee(user2.address)
+            const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(FEE_ROLE, user1.address)
+            await token.connect(user1).excludeFromFee(user2.address)
             expect(await token.isExcludedFromFee(user2.address)).to.be.equal(true)
           })
         })
@@ -231,14 +272,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, marketing } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).includeInFee(marketing.address)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).includeInFee(marketing.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, marketing } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).includeInFee(marketing.address)
+            const { token, owner,user1, marketing } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(FEE_ROLE, user1.address)
+            await token.connect(user1).includeInFee(marketing.address)
             expect(await token.isExcludedFromFee(marketing.address)).to.be.equal(false)
           })
         })
@@ -248,14 +290,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, antiques } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setAntiquitiesWallet(antiques.address)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).setAntiquitiesWallet(antiques.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, antiques } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).setAntiquitiesWallet(antiques.address)
+            const { token, owner, user1, antiques } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(WALLET_ROLE, user1.address)
+            await token.connect(user1).setAntiquitiesWallet(antiques.address)
             expect(await token.antiquitiesWallet()).to.be.equal(antiques.address)
           })
         })
@@ -265,14 +308,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, gas } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setGasWallet(gas.address)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).setGasWallet(gas.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, gas } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).setGasWallet(gas.address)
+            const { token, owner, user1, gas } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(WALLET_ROLE, user1.address)
+            await token.connect(user1).setGasWallet(gas.address)
             expect(await token.gasWallet()).to.be.equal(gas.address)
           })
         })
@@ -282,14 +326,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, marketing } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setMarketingWallet(marketing.address)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(token.connect(user1).setMarketingWallet(marketing.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
           })
         })
     
         describe("when sender is owner", () => {
           it("should succeed", async () => {
-            const { token, owner, marketing } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).setMarketingWallet(marketing.address)
+            const { token, owner, user1, marketing } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).grantRole(WALLET_ROLE, user1.address)
+            await token.connect(user1).setMarketingWallet(marketing.address)
             expect(await token.marketingWallet()).to.be.equal(marketing.address)
           })
         })
@@ -308,9 +353,10 @@ describe("Token contract", function () {
         describe("when sender is excluded from fee", () => {
 
           it("should succeed", async () => {
-            const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).EnableTrading()
-            await token.connect(owner).excludeFromFee(user1.address)
+            const { token, owner, antiques, user1, user2 } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).enableTrading()
+            await token.connect(owner).grantRole(FEE_ROLE, antiques.address)
+            await token.connect(antiques).excludeFromFee(user1.address)
             await token.connect(user1).transfer(user2.address, transferAmount)
             expect(await token.balanceOf(user2.address)).to.be.equal(transferAmount)
           })
@@ -319,7 +365,7 @@ describe("Token contract", function () {
         describe("when sender is not excluded from fee", () => {
           it("should succeed, sender has a bit more due to reflections", async () => {
             const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).EnableTrading()
+            await token.connect(owner).enableTrading()
             await token.connect(user1).transfer(user2.address, transferAmount)
             expect(await token.balanceOf(user1.address)).to.be.greaterThan(transferAmount.mul(4))
             expect(await token.balanceOf(user2.address)).to.be.greaterThan(totalTransferred)
@@ -328,7 +374,7 @@ describe("Token contract", function () {
         describe("when sender is excluded from reward", () => {
           it("should succeed to send funds to non excluded and non excluded should have a bit more due to reflections", async () => {
             const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).EnableTrading()
+            await token.connect(owner).enableTrading()
             await token.connect(owner).excludeFromReward(user1.address);
             await token.connect(user1).transfer(user2.address, transferAmount);
             
@@ -337,32 +383,50 @@ describe("Token contract", function () {
           })
           it("should succeed to send funds to excluded", async () => {
             const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).EnableTrading()
+            await token.connect(owner).enableTrading()
             await token.connect(owner).excludeFromReward(user1.address);
             await token.connect(owner).excludeFromReward(user2.address);
             await token.connect(user1).transfer(user2.address, transferAmount);
             expect(await token.balanceOf(user2.address)).to.be.equal(totalTransferred);
             expect(await token.balanceOf(user1.address)).to.be.equal(transferAmount.mul(4));
           })
+          it("should succeed to send 0 value transfers", async () => {
+            const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).enableTrading()
+            await token.connect(owner).excludeFromReward(user1.address);
+            await token.connect(owner).excludeFromReward(user2.address);
+            const u1Balance = await token.balanceOf(user1.address);
+            await token.connect(user1).transfer(user2.address, 0);
+            expect(await token.balanceOf(user2.address)).to.be.equal(0);
+            expect(await token.balanceOf(user1.address)).to.be.equal(u1Balance);
+          })
         })
 
         describe("when sender is not excluded from reward", () => {
           it("should succeed to send funds to non excluded and both should have a bit more due to reflections", async () => {
             const { token,owner, user1, user2 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).EnableTrading()
+            await token.connect(owner).enableTrading()
             await token.connect(user1).transfer(user2.address, transferAmount);
             expect(await token.balanceOf(user2.address)).to.be.greaterThan(totalTransferred);
             expect(await token.balanceOf(user1.address)).to.be.greaterThan(transferAmount.mul(4));
           })
           it("should succeed to send funds to excluded and non excluded should have a bit more due to reflections", async () => {
             const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).EnableTrading()
+            await token.connect(owner).enableTrading()
             await token.connect(owner).excludeFromReward(user2.address);
             await token.connect(user1).transfer(user2.address, transferAmount);
             expect(await token.balanceOf(user2.address)).to.be.equal(totalTransferred);
             expect(await token.balanceOf(user1.address)).to.be.greaterThan(transferAmount.mul(4));
           })
-
+          it("should succeed to send 0 value transfers", async () => {
+            const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).enableTrading()
+            await token.connect(owner).excludeFromReward(user2.address);
+            const u1Balance = await token.balanceOf(user1.address);
+            await token.connect(user1).transfer(user2.address, 0);
+            expect(await token.balanceOf(user2.address)).to.be.equal(0);
+            expect(await token.balanceOf(user1.address)).to.be.equal(u1Balance);
+          })
         })
 
       })
@@ -378,25 +442,20 @@ describe("Token contract", function () {
       })
       it("should add Liquidity", async () => {
         const { token, owner, routerInstance, pairInstance } = await loadFixture(deployTokenFixture);
-        await token.connect(owner).EnableTrading()
+        await token.connect(owner).enableTrading()
         await token.connect(owner).approve(routerInstance.address, ethers.constants.MaxUint256)
-        const initOwnerBalance = await ethers.provider.getBalance(owner.address)
         await routerInstance.connect(owner).addLiquidityETH(token.address, ethers.utils.parseUnits("10000", "gwei"), ethers.utils.parseUnits("10000", "gwei"), ethers.utils.parseUnits("10000", "gwei"), owner.address, ethers.constants.MaxUint256, { value: ethers.utils.parseUnits("2", "ether") })
         expect(await token.balanceOf(pairInstance.address)).to.be.equal(ethers.utils.parseUnits("10000", "gwei"))
-        // expect(await ethers.provider.getBalance(owner.address)).to.equal(initOwnerBalance.sub(ethers.utils.parseUnits("2", "ether")))
         // Initial liquidity amount is actually calculated by the router, so we can't really test it
         expect(await pairInstance.balanceOf(owner.address)).to.be.greaterThan(ethers.utils.parseUnits("10000", "gwei"))
       })
 
       it("should swap tokens for ETH", async () => {
         const { token, owner, routerInstance, pairInstance } = await loadFixture(deployTokenFixture);
-        await token.connect(owner).EnableTrading()
+        await token.connect(owner).enableTrading()
         await token.connect(owner).approve(routerInstance.address, ethers.constants.MaxUint256)
         await routerInstance.connect(owner).addLiquidityETH(token.address, ethers.utils.parseUnits("50000000000", "gwei"), ethers.utils.parseUnits("10000", "gwei"), ethers.utils.parseUnits("10000", "gwei"), owner.address, ethers.constants.MaxUint256, { value: ethers.utils.parseUnits("20", "ether") })
         const ownerBalance = await ethers.provider.getBalance(owner.address)
-        console.log({
-          aprox: await routerInstance.getAmountsOut(ethers.utils.parseUnits("100000000", "gwei"), [token.address, routerInstance.WETH()]),
-        })
         await routerInstance.connect(owner).swapExactTokensForETHSupportingFeeOnTransferTokens(ethers.utils.parseUnits("100000000", "gwei"), 0, [token.address, routerInstance.WETH()], owner.address, ethers.constants.MaxUint256)
         expect(await ethers.provider.getBalance(owner.address)).to.be.greaterThan(ownerBalance)
       })
