@@ -11,9 +11,9 @@ const FEE_ROLE = keccak256(toUtf8Bytes("FEE"));
 
 describe("Token contract", function () {
     async function deployTokenFixture() {
-      const [owner, user1, user2, user3, marketing, antiques, gas, trusted, recoveryAdmin] = await ethers.getSigners();
+      const [owner, user1, user2, user3, user4, marketing, antiques, gas, trusted, recoveryAdmin] = await ethers.getSigners();
         const Token = await ethers.getContractFactory("TheRareAntiquitiesTokenLtd", owner);
-        const token = await Token.deploy(marketing.address, antiques.address, gas.address, trusted.address);
+        const token = await Token.deploy(marketing.address, antiques.address, gas.address, trusted.address, [owner.address, user1.address, user2.address, user3.address, user4.address]);
         await token.deployed();
         const losslessV2Controller = '0xe91D7cEBcE484070fc70777cB04F7e2EfAe31DB4'
         const losslessAdmin = '0x4CcEE09FDd72c4CbAB6f4D27d2060375B27cD314'
@@ -28,7 +28,7 @@ describe("Token contract", function () {
         const pairFactory = await ethers.getContractAt("IRARESwapFactory", await routerInstance.factory())
         const pairInstance = await ethers.getContractAt("IRARESwapPair", await token.rareSwapPair())
 
-        return { token, owner, user1, user2, user3, marketing, antiques, gas, trusted, recoveryAdmin, losslessV2Controller, losslessAdmin, keyHash, key, maxAmount, botWallet, routerInstance, pairInstance, pairFactory };
+        return { token, owner, user1, user2, user3, user4, marketing, antiques, gas, trusted, recoveryAdmin, losslessV2Controller, losslessAdmin, keyHash, key, maxAmount, botWallet, routerInstance, pairInstance, pairFactory };
     }
 
     describe("Deployment", function () {
@@ -42,24 +42,22 @@ describe("Token contract", function () {
     
       describe("Set LossLess Controller", () => {
         
-        describe("when sender is not owner", () => {
+        describe("when sender is not the role", () => {
           it("should revert", async () => {
-            const { token, user1, losslessV2Controller } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setLosslessController(losslessV2Controller)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            const { token, owner, losslessV2Controller } = await loadFixture(deployTokenFixture);
+            await expect(token.connect(owner).setLosslessController(losslessV2Controller)).to.be.revertedWith(`AccessControl: account ${owner.address.toLowerCase()} is missing role ${LOSSLESS_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it('should revert when setting to zero address', async () => {
-            const { token, owner, user1 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(LOSSLESS_ROLE, user1.address)
+            const { token, user1 } = await loadFixture(deployTokenFixture);
             await expect(
                 token.connect(user1).setLosslessController('0x0000000000000000000000000000000000000000'),
               ).to.be.revertedWith('BridgeMintableToken: Controller cannot be zero address.');
             });
           it("should succeed", async () => {
-            const { token, owner, user1, losslessV2Controller } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(LOSSLESS_ROLE, user1.address)
+            const { token, user1, losslessV2Controller } = await loadFixture(deployTokenFixture);
             await token.connect(user1).setLosslessController(losslessV2Controller)
               expect(await token.lossless()).to.be.equal(losslessV2Controller)
           })
@@ -71,15 +69,14 @@ describe("Token contract", function () {
         
         describe("when sender is not owner", () => {
           it("should revert", async () => {
-            const { token, losslessAdmin, user1,  } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setLosslessAdmin(losslessAdmin)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            const { token, losslessAdmin, owner,  } = await loadFixture(deployTokenFixture);
+            await expect(token.connect(owner).setLosslessAdmin(losslessAdmin)).to.be.revertedWith(`AccessControl: account ${owner.address.toLowerCase()} is missing role ${LOSSLESS_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner, user1, losslessAdmin } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(LOSSLESS_ROLE, user1.address)
+            const { token, user1, losslessAdmin } = await loadFixture(deployTokenFixture);
             await token.connect(user1).setLosslessAdmin(losslessAdmin)
               expect(await token.admin()).to.be.equal(losslessAdmin)
           })
@@ -90,16 +87,15 @@ describe("Token contract", function () {
 
         describe("when sender is not owner", () => {
           it("should revert", async () => {
-            const { token, user1, recoveryAdmin, keyHash } = await loadFixture(deployTokenFixture);
+            const { token, owner, recoveryAdmin, keyHash } = await loadFixture(deployTokenFixture);
     
-            await expect(token.connect(user1).transferRecoveryAdminOwnership(recoveryAdmin.address, keyHash)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(owner).transferRecoveryAdminOwnership(recoveryAdmin.address, keyHash)).to.be.revertedWith(`AccessControl: account ${owner.address.toLowerCase()} is missing role ${LOSSLESS_ROLE}`)
           })
         })
       
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner, user1, recoveryAdmin, keyHash, key} = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(LOSSLESS_ROLE, user1.address)
+            const { token, user1, recoveryAdmin, keyHash, key} = await loadFixture(deployTokenFixture);
             await token.connect(user1).transferRecoveryAdminOwnership(recoveryAdmin.address, keyHash);
             await token.connect(recoveryAdmin).acceptRecoveryAdminOwnership(key);
           })
@@ -113,22 +109,18 @@ describe("Token contract", function () {
       describe("Role Setter", () => {
         it("should set the right role", async () => {
           const { token, owner, user1 } = await loadFixture(deployTokenFixture);
-          await token.connect(owner).grantRole(LOSSLESS_ROLE,user1.address)
           expect(await token.hasRole(LOSSLESS_ROLE, user1.address)).to.be.equal(true)
         })
 
-        it("should revoke the right role", async () => {
-          const { token, owner, user1 } = await loadFixture(deployTokenFixture);
-          await token.connect(owner).grantRole(LOSSLESS_ROLE,user1.address)
-          expect(await token.getRoleMemberAmount(LOSSLESS_ROLE)).to.be.equal(1)
-          await token.connect(owner).revokeRole(LOSSLESS_ROLE,user1.address)
+        it("should renounce the right role", async () => {
+          const { token, user1 } = await loadFixture(deployTokenFixture);
+          await token.connect(user1).renounceRole(LOSSLESS_ROLE,user1.address)
           expect(await token.hasRole(LOSSLESS_ROLE, user1.address)).to.be.equal(false)
-          expect(await token.getRoleMemberAmount(LOSSLESS_ROLE)).to.be.equal(0)
         })
 
-        it("should not allow self role granting" , async () => {
+        it("should not allow role granting" , async () => {
           const { token, owner } = await loadFixture(deployTokenFixture);
-          await expect(token.connect(owner).grantRole(LOSSLESS_ROLE, owner.address)).to.be.revertedWith("SELF_GRANT")
+          await expect(token.connect(owner).grantRole(LOSSLESS_ROLE, owner.address)).to.be.revertedWith(`AccessControl: account ${owner.address.toLowerCase()} is missing role 0x0000000000000000000000000000000000000000000000000000000000000000`)
         })
       })
     
@@ -140,7 +132,7 @@ describe("Token contract", function () {
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
             const { token, owner } = await loadFixture(deployTokenFixture);
             await token.connect(owner).enableTrading()
@@ -153,22 +145,19 @@ describe("Token contract", function () {
         describe("when sender is not MAX", () => {
           it("should revert", async () => {
             const { token, user1, maxAmount } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setMaxWalletAmount(maxAmount)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).setMaxWalletAmount(maxAmount)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${MAX_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("wallet amount should exceed 0.5% of the supply", async () => {
-            const { token, owner, user1, maxAmount } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(MAX_ROLE, user1.address)
-            expect( await token.hasRole(MAX_ROLE, user1.address)).to.be.equal(true)
-            expect( await token.getRoleMemberAmount(MAX_ROLE)).to.be.equal(1)
-            expect(token.connect(user1).setMaxWalletAmount(maxAmount)).to.be.revertedWith("ERR: max wallet amount should exceed 0.5% of the supply")
+            const { token, owner, maxAmount } = await loadFixture(deployTokenFixture);
+            expect( await token.hasRole(MAX_ROLE, owner.address)).to.be.equal(true)
+            expect(token.connect(owner).setMaxWalletAmount(maxAmount)).to.be.revertedWith("ERR: max wallet amount should exceed 0.5% of the supply")
           })
           it("should succeed", async () => {
-            const { token, owner, user1, maxAmount } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(MAX_ROLE, user1.address)
-            await token.connect(user1).setMaxWalletAmount((maxAmount.mul(2)))
+            const { token, owner, maxAmount } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).setMaxWalletAmount((maxAmount.mul(2)))
             expect(await token._maxWallet()).to.be.equal(maxAmount.mul(2).mul(10**9))
           })
         })
@@ -178,20 +167,18 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, maxAmount } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setMaxTxAmount(maxAmount)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).setMaxTxAmount(maxAmount)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${MAX_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("wallet amount should exceed 0.5% of the supply", async () => {
-            const { token, owner, user1, maxAmount } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(MAX_ROLE, user1.address)
-            expect(token.connect(user1).setMaxTxAmount(maxAmount)).to.be.revertedWith("ERR: max wallet amount should exceed 0.5% of the supply")
+            const { token, owner, maxAmount } = await loadFixture(deployTokenFixture);
+            expect(token.connect(owner).setMaxTxAmount(maxAmount)).to.be.revertedWith("ERR: max wallet amount should exceed 0.5% of the supply")
           })
           it("should succeed", async () => {
-            const { token, owner, user1, maxAmount } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(MAX_ROLE, user1.address)
-            await token.connect(user1).setMaxTxAmount(maxAmount.mul(2))
+            const { token, owner, maxAmount } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).setMaxTxAmount(maxAmount.mul(2))
             expect(await token._maxTxAmount()).to.be.equal(maxAmount.mul(2).mul(10**9))
           })
         })
@@ -201,15 +188,14 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, botWallet } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).addBotWallet(botWallet)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).addBotWallet(botWallet)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${BOT_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner, user1, botWallet } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(BOT_ROLE, user1.address)
-            await token.connect(user1).addBotWallet(botWallet)
+            const { token, user4, botWallet } = await loadFixture(deployTokenFixture);
+            await token.connect(user4).addBotWallet(botWallet)
             expect(await token.getBotWalletStatus(botWallet)).to.be.equal(true)
           })
         })
@@ -219,15 +205,14 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, botWallet } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).removeBotWallet(botWallet)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).removeBotWallet(botWallet)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${BOT_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner, user1, botWallet } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(BOT_ROLE, user1.address)
-            await token.connect(user1).removeBotWallet(botWallet)
+            const { token, user4, botWallet } = await loadFixture(deployTokenFixture);
+            await token.connect(user4).removeBotWallet(botWallet)
             expect(await token.getBotWalletStatus(botWallet)).to.be.equal(false)
           })
         })
@@ -237,16 +222,15 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, user2 } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).excludeFromFee(user2.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).excludeFromFee(user2.address)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${FEE_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(FEE_ROLE, user1.address)
-            await token.connect(user1).excludeFromFee(user2.address)
-            expect(await token.isExcludedFromFee(user2.address)).to.be.equal(true)
+            const { token, user2, user1 } = await loadFixture(deployTokenFixture);
+            await token.connect(user2).excludeFromFee(user1.address)
+            expect(await token.isExcludedFromFee(user1.address)).to.be.equal(true)
           })
         })
       })
@@ -259,7 +243,7 @@ describe("Token contract", function () {
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
             const { token, owner, user2 } = await loadFixture(deployTokenFixture);
             await token.connect(owner).excludeFromReward(user2.address)
@@ -272,15 +256,14 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, marketing } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).includeInFee(marketing.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).includeInFee(marketing.address)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${FEE_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner,user1, marketing } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(FEE_ROLE, user1.address)
-            await token.connect(user1).includeInFee(marketing.address)
+            const { token, user2, marketing } = await loadFixture(deployTokenFixture);
+            await token.connect(user2).includeInFee(marketing.address)
             expect(await token.isExcludedFromFee(marketing.address)).to.be.equal(false)
           })
         })
@@ -290,15 +273,14 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, antiques } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setAntiquitiesWallet(antiques.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).setAntiquitiesWallet(antiques.address)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${WALLET_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner, user1, antiques } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(WALLET_ROLE, user1.address)
-            await token.connect(user1).setAntiquitiesWallet(antiques.address)
+            const { token, user3, antiques } = await loadFixture(deployTokenFixture);
+            await token.connect(user3).setAntiquitiesWallet(antiques.address)
             expect(await token.antiquitiesWallet()).to.be.equal(antiques.address)
           })
         })
@@ -308,15 +290,14 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, gas } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setGasWallet(gas.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).setGasWallet(gas.address)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${WALLET_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner, user1, gas } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(WALLET_ROLE, user1.address)
-            await token.connect(user1).setGasWallet(gas.address)
+            const { token, user3, gas } = await loadFixture(deployTokenFixture);
+            await token.connect(user3).setGasWallet(gas.address)
             expect(await token.gasWallet()).to.be.equal(gas.address)
           })
         })
@@ -326,15 +307,14 @@ describe("Token contract", function () {
         describe("when sender is not owner", () => {
           it("should revert", async () => {
             const { token, user1, marketing } = await loadFixture(deployTokenFixture);
-            await expect(token.connect(user1).setMarketingWallet(marketing.address)).to.be.revertedWith("RARE: NOT_ALLOWED")
+            await expect(token.connect(user1).setMarketingWallet(marketing.address)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${WALLET_ROLE}`)
           })
         })
     
-        describe("when sender is owner", () => {
+        describe("when sender is ROLE", () => {
           it("should succeed", async () => {
-            const { token, owner, user1, marketing } = await loadFixture(deployTokenFixture);
-            await token.connect(owner).grantRole(WALLET_ROLE, user1.address)
-            await token.connect(user1).setMarketingWallet(marketing.address)
+            const { token, user3, marketing } = await loadFixture(deployTokenFixture);
+            await token.connect(user3).setMarketingWallet(marketing.address)
             expect(await token.marketingWallet()).to.be.equal(marketing.address)
           })
         })
@@ -353,12 +333,11 @@ describe("Token contract", function () {
         describe("when sender is excluded from fee", () => {
 
           it("should succeed", async () => {
-            const { token, owner, antiques, user1, user2 } = await loadFixture(deployTokenFixture);
+            const { token, owner, user1, user2, user3 } = await loadFixture(deployTokenFixture);
             await token.connect(owner).enableTrading()
-            await token.connect(owner).grantRole(FEE_ROLE, antiques.address)
-            await token.connect(antiques).excludeFromFee(user1.address)
-            await token.connect(user1).transfer(user2.address, transferAmount)
-            expect(await token.balanceOf(user2.address)).to.be.equal(transferAmount)
+            await token.connect(user2).excludeFromFee(user1.address)
+            await token.connect(user1).transfer(user3.address, transferAmount)
+            expect(await token.balanceOf(user3.address)).to.be.equal(transferAmount)
           })
         })
     
