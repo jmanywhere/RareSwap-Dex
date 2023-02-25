@@ -19,25 +19,7 @@
 
 pragma solidity 0.8.17;
 
-/**
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they should not be accessed in such a direct
- * manner, since when dealing with meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-abstract contract Context {
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view virtual returns (bytes calldata) {
-        return msg.data;
-    }
-}
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 // File: https://github.com/OpenZeppelin/openzeppelin-contracts/contracts/metatx/ERC2771Context.sol
 
@@ -941,15 +923,15 @@ interface ILERC20 {
     event LosslessOn();
 }
 
-contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
-    struct RoleData {
-        mapping(address => bool) members; //
-        uint totalMembers; // tracks total number of members with this role
-    }
+contract TheRareAntiquitiesTokenLtd is
+    ERC2771Context,
+    ILERC20,
+    AccessControl,
+    Ownable
+{
     // Roles
     // Roles can only be added by members of the same role
     // Owner can set the role, ONLY when the role is not setup
-    mapping(bytes32 => RoleData) private _roles;
     bytes32 public constant FEE_ROLE = keccak256("FEE");
     bytes32 public constant WALLET_ROLE = keccak256("WALLET");
     bytes32 public constant LOSSLESS_ROLE = keccak256("LOSSLESS");
@@ -1020,17 +1002,6 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     bool public isLosslessOn = false;
     ILssController public lossless;
 
-    event RoleGranted(
-        bytes32 indexed role,
-        address indexed account,
-        address indexed granter
-    );
-    event RoleRevoked(
-        bytes32 indexed role,
-        address indexed account,
-        address indexed granter
-    );
-
     modifier onlyExchange() {
         bool isPair = false;
         if (msg.sender == rareSwapPair) isPair = true;
@@ -1042,21 +1013,12 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         _;
     }
 
-    modifier onlyRole(bytes32 role, bool setup) {
-        if (setup) {
-            require(
-                hasRole(role, _msgSender()) || _msgSender() == owner(),
-                "RARE: NOT_ALLOWED"
-            );
-        } else require(hasRole(role, _msgSender()), "RARE: NOT_ALLOWED");
-        _;
-    }
-
     constructor(
         address _marketingWallet,
         address _antiquitiesWallet,
         address _gasWallet,
-        address _trustedForwarder
+        address _trustedForwarder,
+        address[] memory adminRoles
     ) ERC2771Context(_trustedForwarder) {
         _rOwned[_msgSender()] = _rTotal;
         _tOwned[_msgSender()] = _tTotal;
@@ -1101,15 +1063,20 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         excludeFromReward(rareSwapPair);
         excludeFromReward(address(rareSwapRouter));
 
+        require(adminRoles.length == 5, "ERR: INVALID_ADMIN_ROLES");
+        _grantRole(MAX_ROLE, adminRoles[0]);
+        _grantRole(LOSSLESS_ROLE, adminRoles[1]);
+        _grantRole(FEE_ROLE, adminRoles[2]);
+        _grantRole(WALLET_ROLE, adminRoles[3]);
+        _grantRole(BOT_ROLE, adminRoles[4]);
+
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
 
     /// @notice set the Maximum amount of tokens that can be held in a wallet
     /// @param amount the amount of tokens in gwei
     /// @dev only owner can call this function, minimum limit is 0.5% of the total supply
-    function setMaxWalletAmount(
-        uint256 amount
-    ) external onlyRole(MAX_ROLE, false) {
+    function setMaxWalletAmount(uint256 amount) external onlyRole(MAX_ROLE) {
         require(
             amount > 2_500_000_000,
             "ERR: max wallet amount should exceed 0.5% of the supply"
@@ -1305,7 +1272,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     /// @notice excludes and address from transfer fees
     /// @param account the address to exclude from transfer fees
     /// @dev this function can only be called by the owner
-    function excludeFromFee(address account) public onlyRole(FEE_ROLE, false) {
+    function excludeFromFee(address account) public onlyRole(FEE_ROLE) {
         require(account != address(0), "excludeFromFee: ZERO");
         require(!_isExcludedFromFee[account], "Account is already excluded");
         _isExcludedFromFee[account] = true;
@@ -1315,7 +1282,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     /// @notice includes an address in transfer fees
     /// @param account the address to include in transfer fees
     /// @dev this function can only be called by the owner
-    function includeInFee(address account) public onlyRole(FEE_ROLE, false) {
+    function includeInFee(address account) public onlyRole(FEE_ROLE) {
         require(account != address(0), "includeInFee: ZERO");
         require(_isExcludedFromFee[account], "Account is already included");
         _isExcludedFromFee[account] = false;
@@ -1327,7 +1294,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     /// @dev this function can only be called by the owner
     function setMarketingWallet(
         address walletAddress
-    ) public onlyRole(WALLET_ROLE, false) {
+    ) public onlyRole(WALLET_ROLE) {
         require(walletAddress != address(0), "includeInFee: ZERO");
         marketingWallet = walletAddress;
         emit AuditLog("We have Updated the setMarketingWallet:", walletAddress);
@@ -1338,7 +1305,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     /// @dev this function can only be called by the owner
     function setAntiquitiesWallet(
         address walletAddress
-    ) public onlyRole(WALLET_ROLE, false) {
+    ) public onlyRole(WALLET_ROLE) {
         require(walletAddress != address(0), "includeInFee: ZERO");
         antiquitiesWallet = walletAddress;
         emit AuditLog(
@@ -1350,9 +1317,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     /// @notice sets the gas Wallet address
     /// @param walletAddress the address of the new gas wallet
     /// @dev this function can only be called by the owner
-    function setGasWallet(
-        address walletAddress
-    ) public onlyRole(WALLET_ROLE, false) {
+    function setGasWallet(address walletAddress) public onlyRole(WALLET_ROLE) {
         require(walletAddress != address(0), "includeInFee: ZERO");
         gasWallet = walletAddress;
         emit AuditLog("We have Updated the gasWallet:", walletAddress);
@@ -1361,7 +1326,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     /// @notice sets the Maximum transaction token transfer limit
     /// @param amount the amount of tokens to set the maximum transaction limit to
     /// @dev this function can only be called by the owner, the amount must be greater than 0.5% of the total supply
-    function setMaxTxAmount(uint256 amount) external onlyRole(MAX_ROLE, false) {
+    function setMaxTxAmount(uint256 amount) external onlyRole(MAX_ROLE) {
         require(
             amount >= 2_500_000_000,
             "ERR: max tx amount should exceed 0.5% of the supply"
@@ -1416,9 +1381,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     /// @notice add a bot wallet to stop from trading and selling
     /// @param botwallet the address of the bot wallet to add
     /// @dev this function can only be called by the owner
-    function addBotWallet(
-        address botwallet
-    ) external onlyRole(BOT_ROLE, false) {
+    function addBotWallet(address botwallet) external onlyRole(BOT_ROLE) {
         require(botwallet != rareSwapPair, "Cannot add pair as a bot");
         require(botwallet != address(this), "Cannot add CA as a bot");
         if (owner() != address(0))
@@ -1433,9 +1396,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     /// @notice remove a wallet from being a bot
     /// @param botwallet the address of the bot wallet to remove
     /// @dev this function can only be called by the owner
-    function removeBotWallet(
-        address botwallet
-    ) external onlyRole(BOT_ROLE, false) {
+    function removeBotWallet(address botwallet) external onlyRole(BOT_ROLE) {
         botWallets[botwallet] = false;
     }
 
@@ -1463,7 +1424,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         uint256 _marketingTaxBPS,
         uint256 _antiquitiesTaxBPS,
         uint256 _gasTaxBPS
-    ) public onlyRole(FEE_ROLE, false) {
+    ) public onlyRole(FEE_ROLE) {
         _taxFee = _reflectionTaxBPS;
         _marketingFee = _marketingTaxBPS;
         _antiquitiesFee = _antiquitiesTaxBPS;
@@ -1762,7 +1723,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
      */
     function setLosslessController(
         address _controller
-    ) public onlyRole(LOSSLESS_ROLE, false) {
+    ) public onlyRole(LOSSLESS_ROLE) {
         require(
             _controller != address(0),
             "BridgeMintableToken: Controller cannot be zero address."
@@ -1783,7 +1744,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
      */
     function setLosslessAdmin(
         address newAdmin
-    ) external onlyRole(LOSSLESS_ROLE, false) {
+    ) external onlyRole(LOSSLESS_ROLE) {
         require(newAdmin != admin, "LERC20: Cannot set same address");
         admin = newAdmin;
         emit NewAdmin(newAdmin);
@@ -1798,7 +1759,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     function transferRecoveryAdminOwnership(
         address candidate,
         bytes32 keyHash
-    ) external onlyRole(LOSSLESS_ROLE, false) {
+    ) external onlyRole(LOSSLESS_ROLE) {
         recoveryAdminCandidate = candidate;
         recoveryAdminKeyHash = keyHash;
         emit NewRecoveryAdminProposal(candidate);
@@ -1879,65 +1840,6 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
 
     function getAdmin() external view returns (address) {
         return admin;
-    }
-
-    /// ---------------------- ///
-    ///          ROLES         ///
-    /// ---------------------- ///
-
-    ///@notice check if account has a role
-    ///@param role the role to check
-    ///@param account the address to check
-    ///@return true if account has role
-    function hasRole(bytes32 role, address account) public view returns (bool) {
-        return _roles[role].members[account];
-    }
-
-    ///@notice grant role to an address
-    ///@param role the role to grant
-    ///@param account the address to grant the role to
-    function grantRole(
-        bytes32 role,
-        address account
-    ) public onlyRole(role, true) {
-        require(account != _msgSender(), "SELF_GRANT");
-        if (!hasRole(role, account)) {
-            _roles[role].members[account] = true;
-            _roles[role].totalMembers++;
-            emit RoleGranted(role, account, _msgSender());
-        }
-    }
-
-    /// @notice revoke role from an address
-    /// @param role the role to revoke
-    /// @param account the address to revoke the role from
-    function revokeRole(
-        bytes32 role,
-        address account
-    ) public onlyRole(role, true) {
-        require(account != _msgSender(), "SELF_REVOKE");
-        _revokeRole(role, account);
-    }
-
-    /// @notice renounce role from an address
-    /// @param role the role to renounce
-    function renounceRole(bytes32 role) public {
-        _revokeRole(role, _msgSender());
-    }
-
-    function _revokeRole(bytes32 role, address account) internal {
-        if (hasRole(role, account)) {
-            _roles[role].members[account] = false;
-            _roles[role].totalMembers--;
-            emit RoleRevoked(role, account, _msgSender());
-        }
-    }
-
-    /// @notice get the amount of members of a role
-    /// @param role the role to get the amount of members
-    /// @return the amount of members of the role
-    function getRoleMemberAmount(bytes32 role) public view returns (uint256) {
-        return _roles[role].totalMembers;
     }
 }
 
