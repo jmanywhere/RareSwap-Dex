@@ -19,25 +19,7 @@
 
 pragma solidity 0.8.17;
 
-/**
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they should not be accessed in such a direct
- * manner, since when dealing with meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-abstract contract Context {
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view virtual returns (bytes calldata) {
-        return msg.data;
-    }
-}
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 // File: https://github.com/OpenZeppelin/openzeppelin-contracts/contracts/metatx/ERC2771Context.sol
 
@@ -55,12 +37,9 @@ abstract contract ERC2771Context is Context {
         _trustedForwarder = trustedForwarder;
     }
 
-    function isTrustedForwarder(address forwarder)
-        public
-        view
-        virtual
-        returns (bool)
-    {
+    function isTrustedForwarder(
+        address forwarder
+    ) public view virtual returns (bool) {
         return forwarder == _trustedForwarder;
     }
 
@@ -115,10 +94,10 @@ interface IERC20 {
 
     function balanceOf(address owner) external view returns (uint256);
 
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 
     function approve(address spender, uint256 value) external returns (bool);
 
@@ -134,10 +113,10 @@ interface IERC20 {
 interface IWETH {
     function balanceOf(address owner) external view returns (uint256);
 
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 
     function deposit() external payable;
 
@@ -235,10 +214,10 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCall(address target, bytes memory data)
-        internal
-        returns (bytes memory)
-    {
+    function functionCall(
+        address target,
+        bytes memory data
+    ) internal returns (bytes memory) {
         return
             functionCallWithValue(
                 target,
@@ -321,11 +300,10 @@ library Address {
      *
      * _Available since v3.3._
      */
-    function functionStaticCall(address target, bytes memory data)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function functionStaticCall(
+        address target,
+        bytes memory data
+    ) internal view returns (bytes memory) {
         return
             functionStaticCall(
                 target,
@@ -361,10 +339,10 @@ library Address {
      *
      * _Available since v3.4._
      */
-    function functionDelegateCall(address target, bytes memory data)
-        internal
-        returns (bytes memory)
-    {
+    function functionDelegateCall(
+        address target,
+        bytes memory data
+    ) internal returns (bytes memory) {
         return
             functionDelegateCall(
                 target,
@@ -436,10 +414,10 @@ library Address {
         }
     }
 
-    function _revert(bytes memory returndata, string memory errorMessage)
-        private
-        pure
-    {
+    function _revert(
+        bytes memory returndata,
+        string memory errorMessage
+    ) private pure {
         // Look for revert reason and bubble it up if present
         if (returndata.length > 0) {
             // The easiest way to bubble the revert reason is using memory via assembly
@@ -524,10 +502,10 @@ interface IRARESwapFactory {
 
     function feeToSetter() external view returns (address);
 
-    function getPair(address tokenA, address tokenB)
-        external
-        view
-        returns (address pair);
+    function getPair(
+        address tokenA,
+        address tokenB
+    ) external view returns (address pair);
 
     function allPairs(uint256) external view returns (address pair);
 
@@ -535,9 +513,10 @@ interface IRARESwapFactory {
 
     function pairExist(address pair) external view returns (bool);
 
-    function createPair(address tokenA, address tokenB)
-        external
-        returns (address pair);
+    function createPair(
+        address tokenA,
+        address tokenB
+    ) external returns (address pair);
 
     function setFeeTo(address) external;
 
@@ -570,10 +549,10 @@ interface IRARESwapPair {
 
     function balanceOf(address owner) external view returns (uint256);
 
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 
     function updateTotalFee(uint256 totalFee) external returns (bool);
 
@@ -646,9 +625,9 @@ interface IRARESwapPair {
 
     function mint(address to) external returns (uint256 liquidity);
 
-    function burn(address to)
-        external
-        returns (uint256 amount0, uint256 amount1);
+    function burn(
+        address to
+    ) external returns (uint256 amount0, uint256 amount1);
 
     function swap(
         uint256 amount0Out,
@@ -682,13 +661,7 @@ interface IRARESwapRouter01 {
         uint256 amountBMin,
         address to,
         uint256 deadline
-    )
-        external
-        returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 liquidity
-        );
+    ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
 
     function addLiquidityETH(
         address token,
@@ -700,11 +673,7 @@ interface IRARESwapRouter01 {
     )
         external
         payable
-        returns (
-            uint256 amountToken,
-            uint256 amountETH,
-            uint256 liquidity
-        );
+        returns (uint256 amountToken, uint256 amountETH, uint256 liquidity);
 
     function removeLiquidity(
         address tokenA,
@@ -816,15 +785,15 @@ interface IRARESwapRouter01 {
         uint256 reserveOut
     ) external pure returns (uint256 amountIn);
 
-    function getAmountsOut(uint256 amountIn, address[] calldata path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function getAmountsOut(
+        uint256 amountIn,
+        address[] calldata path
+    ) external view returns (uint256[] memory amounts);
 
-    function getAmountsIn(uint256 amountOut, address[] calldata path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function getAmountsIn(
+        uint256 amountOut,
+        address[] calldata path
+    ) external view returns (uint256[] memory amounts);
 }
 
 interface IRARESwapRouter is IRARESwapRouter01 {
@@ -895,14 +864,15 @@ interface ILERC20 {
 
     function balanceOf(address _account) external view returns (uint256);
 
-    function transfer(address _recipient, uint256 _amount)
-        external
-        returns (bool);
+    function transfer(
+        address _recipient,
+        uint256 _amount
+    ) external returns (bool);
 
-    function allowance(address _owner, address _spender)
-        external
-        view
-        returns (uint256);
+    function allowance(
+        address _owner,
+        address _spender
+    ) external view returns (uint256);
 
     function approve(address _spender, uint256 _amount) external returns (bool);
 
@@ -912,13 +882,15 @@ interface ILERC20 {
         uint256 _amount
     ) external returns (bool);
 
-    function increaseAllowance(address _spender, uint256 _addedValue)
-        external
-        returns (bool);
+    function increaseAllowance(
+        address _spender,
+        uint256 _addedValue
+    ) external returns (bool);
 
-    function decreaseAllowance(address _spender, uint256 _subtractedValue)
-        external
-        returns (bool);
+    function decreaseAllowance(
+        address _spender,
+        uint256 _subtractedValue
+    ) external returns (bool);
 
     function transferOutBlacklistedFunds(address[] calldata _from) external;
 
@@ -951,7 +923,21 @@ interface ILERC20 {
     event LosslessOn();
 }
 
-contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
+contract TheRareAntiquitiesTokenLtd is
+    ERC2771Context,
+    ILERC20,
+    AccessControl,
+    Ownable
+{
+    // Roles
+    // Roles can only be added by members of the same role
+    // Owner can set the role, ONLY when the role is not setup
+    bytes32 public constant FEE_ROLE = keccak256("FEE");
+    bytes32 public constant WALLET_ROLE = keccak256("WALLET");
+    bytes32 public constant LOSSLESS_ROLE = keccak256("LOSSLESS");
+    bytes32 public constant MAX_ROLE = keccak256("MAX");
+    bytes32 public constant BOT_ROLE = keccak256("BOT");
+
     using Address for address;
 
     mapping(address => uint256) private _rOwned;
@@ -964,7 +950,10 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     mapping(address => bool) private _isExcludedFromFee;
 
     mapping(address => bool) private _isExcluded;
-    address[] private _excluded;
+
+    // Exclusion amounts
+    uint private excludedT;
+    uint private excludedR;
 
     mapping(address => bool) private botWallets;
     bool public botsCantrade = false;
@@ -1010,7 +999,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     bytes32 private recoveryAdminKeyHash;
     uint256 public timelockPeriod = 30 days;
     uint256 public losslessTurnOffTimestamp;
-    bool public isLosslessOn = true;
+    bool public isLosslessOn = false;
     ILssController public lossless;
 
     modifier onlyExchange() {
@@ -1028,7 +1017,8 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         address _marketingWallet,
         address _antiquitiesWallet,
         address _gasWallet,
-        address _trustedForwarder
+        address _trustedForwarder,
+        address[] memory adminRoles
     ) ERC2771Context(_trustedForwarder) {
         _rOwned[_msgSender()] = _rTotal;
         _tOwned[_msgSender()] = _tTotal;
@@ -1037,73 +1027,119 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         antiquitiesWallet = _antiquitiesWallet;
         gasWallet = _gasWallet;
 
-        // This is for BSC - double check the address since this one may not be the correct one
+        // Setup router
         rareSwapRouter = IRARESwapRouter(
             0x027bC3A29990aAED16F65a08C8cc3A92E0AFBAA4
-        ); //RareSwap Router 0x027bC3A29990aAED16F65a08C8cc3A92E0AFBAA4
+        );
         WETH = rareSwapRouter.WETH();
-
-        // Create a uniswap pair for this new token
-
+        // Create the pair
         rareSwapPair = IRARESwapFactory(rareSwapRouter.factory()).createPair(
             address(this),
             WETH
         );
-
-        lossless = ILssController(0xDBB5125CEEaf7233768c84A5dF570AeECF0b4634); // BSC Controller
-
         // Set base token in the pair as WETH, which acts as the tax token
-        //IRARESwapPair(rareSwapPair).setBaseToken(WETH);
-        //IRARESwapPair(rareSwapPair).updateTotalFee(_marketingFee + _antiquitiesFee + _gasFee);
-
-        //_approve(_msgSender(), address(rareSwapRouter), _tTotal);
+        IRARESwapPair(rareSwapPair).setBaseToken(WETH);
+        require(
+            IRARESwapPair(rareSwapPair).updateTotalFee(
+                _marketingFee + _antiquitiesFee + _gasFee
+            ),
+            "FEE_UPDATE_FAILED"
+        );
 
         depWallet = 0x611980Ea951D956Bd04C39A5A176EaB35EB93982;
         //exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         _isExcludedFromFee[depWallet] = true;
+        _isExcludedFromFee[gasWallet] = true;
+        _isExcludedFromFee[marketingWallet] = true;
+        _isExcludedFromFee[antiquitiesWallet] = true;
+
+        excludeFromReward(address(this));
+        excludeFromReward(depWallet);
+        excludeFromReward(gasWallet);
+        excludeFromReward(marketingWallet);
+        excludeFromReward(antiquitiesWallet);
+        excludeFromReward(rareSwapPair);
+        excludeFromReward(address(rareSwapRouter));
+
+        require(adminRoles.length == 5, "ERR: INVALID_ADMIN_ROLES");
+        _grantRole(MAX_ROLE, adminRoles[0]);
+        _grantRole(LOSSLESS_ROLE, adminRoles[1]);
+        _grantRole(FEE_ROLE, adminRoles[2]);
+        _grantRole(WALLET_ROLE, adminRoles[3]);
+        _grantRole(BOT_ROLE, adminRoles[4]);
 
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
 
+    /// @notice set the Maximum amount of tokens that can be held in a wallet
+    /// @param amount the amount of tokens in gwei
+    /// @dev only owner can call this function, minimum limit is 0.5% of the total supply
+    function setMaxWalletAmount(uint256 amount) external onlyRole(MAX_ROLE) {
+        require(
+            amount > 2_500_000_000,
+            "ERR: max wallet amount should exceed 0.5% of the supply"
+        );
+        _maxWallet = amount * 10 ** 9;
+        emit Log("New max wallet amount:", amount);
+    }
+
+    /// @notice ERC20 implementation of total Circulating supply of the token
+    /// @return _tTotal total supply of the token
     function totalSupply() public view override returns (uint256) {
         return _tTotal;
     }
 
+    /// @notice ERC20 implementation of user's balance
+    /// @param account the address of the user to check
+    /// @return balance of the user
+    /// @dev if the address is excluded from reward, it returns the balance of the user without any reflections accounted for
     function balanceOf(address account) public view override returns (uint256) {
         if (_isExcluded[account]) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]);
     }
 
-    function transfer(address recipient, uint256 amount)
-        public
-        override
-        lssTransfer(recipient, amount)
-        returns (bool)
-    {
+    /// @notice ERC20 implementation of transfer function
+    /// @param recipient the address of the recipient
+    /// @param amount the amount of tokens to transfer
+    /// @return true if the transfer is successful
+    function transfer(
+        address recipient,
+        uint256 amount
+    ) public override lssTransfer(recipient, amount) returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    function allowance(address _owner, address spender)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    /// @notice ERC20 implementation of allowance function
+    /// @param _owner the address of the owner
+    /// @param spender the address of the spender
+    /// @return amount of tokens that the spender is allowed to spend
+    function allowance(
+        address _owner,
+        address spender
+    ) public view override returns (uint256) {
         return _allowances[_owner][spender];
     }
 
-    function approve(address spender, uint256 amount)
-        public
-        override
-        returns (bool)
-    {
+    /// @notice ERC20 implementation of approve function
+    /// @param spender the address of the spender
+    /// @param amount the amount of tokens to approve
+    /// @return true if the approval is successful
+    function approve(
+        address spender,
+        uint256 amount
+    ) public override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
+    /// @notice ERC20 implementation of transferFrom function
+    /// @param sender the address of the sender
+    /// @param recipient the address of the recipient
+    /// @param amount the amount of tokens to transfer
+    /// @return true if the transfer is successful
     function transferFrom(
         address sender,
         address recipient,
@@ -1123,12 +1159,14 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return true;
     }
 
-    //ERC 20 Standard increase Allowance
-    function increaseAllowance(address spender, uint256 addedValue)
-        public
-        virtual
-        returns (bool)
-    {
+    /// @notice ERC20 implementation of increaseAllowance function
+    /// @param spender the address of the spender
+    /// @param addedValue the amount of tokens to increase the allowance by
+    /// @return true if the increase is successful
+    function increaseAllowance(
+        address spender,
+        uint256 addedValue
+    ) public virtual returns (bool) {
         _approve(
             _msgSender(),
             spender,
@@ -1137,12 +1175,14 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return true;
     }
 
-    //ERC 20 Standard decrease Allowance
-    function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
-        virtual
-        returns (bool)
-    {
+    /// @notice ERC20 implementation of decreaseAllowance function
+    /// @param spender the address of the spender
+    /// @param subtractedValue the amount of tokens to decrease the allowance by
+    /// @return true if the decrease is successful
+    function decreaseAllowance(
+        address spender,
+        uint256 subtractedValue
+    ) public virtual returns (bool) {
         _approve(
             _msgSender(),
             spender,
@@ -1151,14 +1191,22 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return true;
     }
 
+    /// @notice function that determines if an address is excluded from reward
+    /// @param account the address to check
+    /// @return true if the address is excluded from reward
     function isExcludedFromReward(address account) public view returns (bool) {
         return _isExcluded[account];
     }
 
+    /// @notice function that returns the amount collected in fees
+    /// @return the amount collected in fees
     function totalFees() public view returns (uint256) {
         return _tFeeTotal;
     }
 
+    /// @notice this works similar to burn function
+    /// @param tAmount the amount of tokens to deliver
+    /// @dev although this function does not reduce the total supply, it reduces the reflection of the sender and the total to be distributed
     function deliver(uint256 tAmount) public {
         address sender = _msgSender();
         require(
@@ -1171,21 +1219,25 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         _tFeeTotal = _tFeeTotal + tAmount;
     }
 
-    function reflectionFromToken(uint256 tAmount, bool deductTransferFee)
-        public
-        view
-        returns (uint256)
-    {
+    /// @notice calcualtes the reflection amount from a given token amount
+    /// @param tAmount the amount of tokens to calculate the reflection amount from
+    /// @param deductTransferFee true if the transfer fee should be deducted
+    /// @return the reflection amount
+    function reflectionFromToken(
+        uint256 tAmount,
+        bool deductTransferFee
+    ) public view returns (uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
         (uint256 rAmount, uint256 rTransferAmount, , , ) = _getValues(tAmount);
         return deductTransferFee ? rTransferAmount : rAmount;
     }
 
-    function tokenFromReflection(uint256 rAmount)
-        public
-        view
-        returns (uint256)
-    {
+    /// @notice calculates the token amount from a given reflection amount
+    /// @param rAmount the amount of reflections to calculate the token amount from
+    /// @return the token amount
+    function tokenFromReflection(
+        uint256 rAmount
+    ) public view returns (uint256) {
         require(
             rAmount <= _rTotal,
             "Amount must be less than total reflections"
@@ -1194,6 +1246,9 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return rAmount / currentRate;
     }
 
+    /// @notice excludes an address from reward
+    /// @param account the address to exclude from reward
+    /// @dev this function can only be called by the owner and the variables for excluded amounts are updated
     function excludeFromReward(address account) public onlyOwner {
         // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
         require(!_isExcluded[account], "Account is already excluded");
@@ -1201,47 +1256,56 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
         }
         _isExcluded[account] = true;
-        _excluded.push(account);
+        excludedT += _tOwned[account];
+        excludedR += _rOwned[account];
     }
 
-    // function includeInReward(address account) external onlyOwner {
-    //     require(_isExcluded[account], "Account is already excluded");
-    //     for (uint256 i = 0; i < _excluded.length; i++) {
-    //         if (_excluded[i] == account) {
-    //             _excluded[i] = _excluded[_excluded.length - 1];
-    //             _tOwned[account] = 0;
-    //             _isExcluded[account] = false;
-    //             _excluded.pop();
-    //             break;
-    //         }
-    //     }
-    // }
-
+    /// @notice updates the Fees set up in the DEX pairs
+    /// @param fee the new fee amount to update
     function _updatePairsFee(uint256 fee) internal {
-        IRARESwapPair(rareSwapPair).updateTotalFee(fee);
+        require(
+            IRARESwapPair(rareSwapPair).updateTotalFee(fee),
+            "FEE_UPDATE_FAILED"
+        );
     }
 
-    function excludeFromFee(address account) public onlyOwner {
+    /// @notice excludes and address from transfer fees
+    /// @param account the address to exclude from transfer fees
+    /// @dev this function can only be called by the owner
+    function excludeFromFee(address account) public onlyRole(FEE_ROLE) {
         require(account != address(0), "excludeFromFee: ZERO");
         require(!_isExcludedFromFee[account], "Account is already excluded");
         _isExcludedFromFee[account] = true;
         emit AuditLog("We have Updated the excludeFromFee:", account);
     }
 
-    function includeInFee(address account) public onlyOwner {
+    /// @notice includes an address in transfer fees
+    /// @param account the address to include in transfer fees
+    /// @dev this function can only be called by the owner
+    function includeInFee(address account) public onlyRole(FEE_ROLE) {
         require(account != address(0), "includeInFee: ZERO");
         require(_isExcludedFromFee[account], "Account is already included");
         _isExcludedFromFee[account] = false;
         emit AuditLog("We have Updated the includeInFee:", account);
     }
 
-    function setMarketingWallet(address walletAddress) public onlyOwner {
+    /// @notice sets the marketing wallet address
+    /// @param walletAddress the address of the new marketing wallet
+    /// @dev this function can only be called by the owner
+    function setMarketingWallet(
+        address walletAddress
+    ) public onlyRole(WALLET_ROLE) {
         require(walletAddress != address(0), "includeInFee: ZERO");
         marketingWallet = walletAddress;
         emit AuditLog("We have Updated the setMarketingWallet:", walletAddress);
     }
 
-    function setAntiquitiesWallet(address walletAddress) public onlyOwner {
+    /// @notice sets the antiquities Wallet address
+    /// @param walletAddress the address of the new antiquities wallet
+    /// @dev this function can only be called by the owner
+    function setAntiquitiesWallet(
+        address walletAddress
+    ) public onlyRole(WALLET_ROLE) {
         require(walletAddress != address(0), "includeInFee: ZERO");
         antiquitiesWallet = walletAddress;
         emit AuditLog(
@@ -1250,37 +1314,38 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         );
     }
 
-    function setGasWallet(address walletAddress) public onlyOwner {
+    /// @notice sets the gas Wallet address
+    /// @param walletAddress the address of the new gas wallet
+    /// @dev this function can only be called by the owner
+    function setGasWallet(address walletAddress) public onlyRole(WALLET_ROLE) {
         require(walletAddress != address(0), "includeInFee: ZERO");
         gasWallet = walletAddress;
         emit AuditLog("We have Updated the gasWallet:", walletAddress);
     }
 
-    function _setMaxWalletAmount(uint256 amount) external onlyOwner {
+    /// @notice sets the Maximum transaction token transfer limit
+    /// @param amount the amount of tokens to set the maximum transaction limit to
+    /// @dev this function can only be called by the owner, the amount must be greater than 0.5% of the total supply
+    function setMaxTxAmount(uint256 amount) external onlyRole(MAX_ROLE) {
         require(
-            amount >= 2500000000,
-            "ERR: max wallet amount should exceed 0.5% of the supply"
-        );
-        _maxWallet = amount * 10**9;
-
-        emit Log("We have set a new max wallet amount:", amount);
-    }
-
-    function setMaxTxAmount(uint256 amount) external onlyOwner {
-        require(
-            amount >= 2500000000,
+            amount >= 2_500_000_000,
             "ERR: max tx amount should exceed 0.5% of the supply"
         );
-        _maxTxAmount = amount * 10**9;
-        emit Log("We have changed the Max Transfer Amount:", amount);
+        _maxTxAmount = amount * 10 ** 9;
+        emit Log("New Max Transfer Amount:", amount);
     }
 
+    /// @notice sends any stuck ETH balance to the marketing wallet
+    /// @dev No matter who calls this function, it always is allocated to marketing wallet
     function clearStuckBalance() public {
         uint256 balance = address(this).balance;
         (bool succ, ) = payable(marketingWallet).call{value: balance}("");
         require(succ, "Transfer failed.");
     }
 
+    /// @notice implementation of Context msgSender
+    /// @return the sender of the transaction
+    /// @dev this is mostly for the lossless and gasless stuff
     function _msgSender()
         internal
         view
@@ -1290,6 +1355,9 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return ERC2771Context._msgSender();
     }
 
+    /// @notice implementation of Context msgData
+    /// @return the data of the transaction
+    /// @dev this is mostly for the lossless and gasless stuff
     function _msgData()
         internal
         view
@@ -1299,6 +1367,9 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return ERC2771Context._msgData();
     }
 
+    /// @notice claim ERC20 tokens sent to this contract
+    /// @param tokenAddress the address of the ERC20 token to claim
+    /// @dev no matter who calls this function, funds are always sent to marketing wallet
     function claimERCtokens(IERC20 tokenAddress) external {
         bool succ = tokenAddress.transfer(
             marketingWallet,
@@ -1307,7 +1378,10 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         require(succ, "Transfer failed.");
     }
 
-    function addBotWallet(address botwallet) external onlyOwner {
+    /// @notice add a bot wallet to stop from trading and selling
+    /// @param botwallet the address of the bot wallet to add
+    /// @dev this function can only be called by the owner
+    function addBotWallet(address botwallet) external onlyRole(BOT_ROLE) {
         require(botwallet != rareSwapPair, "Cannot add pair as a bot");
         require(botwallet != address(this), "Cannot add CA as a bot");
         if (owner() != address(0))
@@ -1319,24 +1393,38 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         botWallets[botwallet] = true;
     }
 
-    function removeBotWallet(address botwallet) external onlyOwner {
+    /// @notice remove a wallet from being a bot
+    /// @param botwallet the address of the bot wallet to remove
+    /// @dev this function can only be called by the owner
+    function removeBotWallet(address botwallet) external onlyRole(BOT_ROLE) {
         botWallets[botwallet] = false;
     }
 
+    /// @notice check if a wallet is a bot
+    /// @param botwallet the address of the bot wallet to check
+    /// @return true if the wallet is a bot, false otherwise
     function getBotWalletStatus(address botwallet) public view returns (bool) {
         return botWallets[botwallet];
     }
 
-    function EnableTrading() external onlyOwner {
+    /// @notice Enables trading for the contract
+    /// @dev this function can only be called by the owner and once called, trading cannot be stopped
+    function enableTrading() external onlyOwner {
         canTrade = true;
     }
 
+    /// @notice Set the new tax amounts
+    /// @param _reflectionTaxBPS the amount of tax to be taken for reflections
+    /// @param _marketingTaxBPS the amount of tax to be taken for marketing
+    /// @param _antiquitiesTaxBPS the amount of tax to be taken for antiquities
+    /// @param _gasTaxBPS the amount of tax to be taken for gas
+    /// @dev this function can only be called by the owner, max totalTax is 15%, marketing + antiquities + gas tax must be over 1%
     function setFees(
         uint256 _reflectionTaxBPS,
         uint256 _marketingTaxBPS,
         uint256 _antiquitiesTaxBPS,
         uint256 _gasTaxBPS
-    ) public onlyOwner {
+    ) public onlyRole(FEE_ROLE) {
         _taxFee = _reflectionTaxBPS;
         _marketingFee = _marketingTaxBPS;
         _antiquitiesFee = _antiquitiesTaxBPS;
@@ -1355,12 +1443,24 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     //to recieve ETH from uniswapV2Router when swaping
     receive() external payable {}
 
+    /// @notice distributes reflection fee
+    /// @param rFee the fee to be distributed
+    /// @param tFee the fee to be added to the counter
     function _reflectFee(uint256 rFee, uint256 tFee) private {
         _rTotal = _rTotal - rFee;
         _tFeeTotal = _tFeeTotal + tFee;
     }
 
-    function _getValues(uint256 tAmount)
+    /// @notice calculates the transfer values
+    /// @param tAmount the amount of tokens to be transferred
+    /// @return rAmount the total amount of reflections to be transferred
+    /// @return rTransferAmount the amount of reflections to be transferred after tax
+    /// @return rFee the tax fee to be reflected
+    /// @return tTransferAmount the amount of tokens to be transferred after tax
+    /// @return tFee the amount of tokens to be taxed
+    function _getValues(
+        uint256 tAmount
+    )
         private
         view
         returns (
@@ -1380,15 +1480,24 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
     }
 
-    function _getTValues(uint256 tAmount)
-        private
-        view
-        returns (uint256 tFee, uint256 tTransferAmount)
-    {
+    /// @notice calculates the tax fee
+    /// @param tAmount the amount of tokens to be taxed
+    /// @return tFee the amount of tokens to be taxed
+    /// @return tTransferAmount the amount of tokens to be transferred after tax
+    function _getTValues(
+        uint256 tAmount
+    ) private view returns (uint256 tFee, uint256 tTransferAmount) {
         tFee = calculateTaxFee(tAmount);
         tTransferAmount = tAmount - tFee;
     }
 
+    /// @notice calculates the reflection coefficient and fee
+    /// @param tAmount the amount of tokens to be taxed
+    /// @param tFee the amount of tokens to be taxed in total
+    /// @param currentRate the current rate of reflections
+    /// @return rAmount the total amount of reflections to be transferred
+    /// @return rTransferAmount the amount of reflections to be transferred after tax
+    /// @return rFee the tax fee to be reflected
     function _getRValues(
         uint256 tAmount,
         uint256 tFee,
@@ -1396,60 +1505,66 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     )
         private
         pure
-        returns (
-            uint256 rAmount,
-            uint256 rTransferAmount,
-            uint256 rFee
-        )
+        returns (uint256 rAmount, uint256 rTransferAmount, uint256 rFee)
     {
         rAmount = tAmount * currentRate;
         rFee = tFee * currentRate;
         rTransferAmount = rAmount - rFee;
     }
 
+    /// @notice calculates the current reflection rate
+    /// @return the current reflection rate based on the supply of reflections and tokens
     function _getRate() private view returns (uint256) {
         (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
         return rSupply / tSupply;
     }
 
+    /// @notice calculates the current supply of reflections and tokens
+    /// @return rSupply the current supply of reflections
+    /// @return tSupply the current supply of tokens
+    /// @dev this function removes all excluded value amounts from the supply
     function _getCurrentSupply() private view returns (uint256, uint256) {
         uint256 rSupply = _rTotal;
         uint256 tSupply = _tTotal;
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (
-                _rOwned[_excluded[i]] > rSupply ||
-                _tOwned[_excluded[i]] > tSupply
-            ) return (_rTotal, _tTotal);
-            rSupply = rSupply - _rOwned[_excluded[i]];
-            tSupply = tSupply - _tOwned[_excluded[i]];
-        }
+        if (excludedR > rSupply || excludedT > tSupply)
+            return (_rTotal, _tTotal);
+
+        rSupply = rSupply - excludedR;
+        tSupply = tSupply - excludedT;
+
         if (rSupply < _rTotal / _tTotal) return (_rTotal, _tTotal);
         return (rSupply, tSupply);
     }
 
+    /// @notice calculates the tax fee
+    /// @param _amount the amount of tokens to be taxed
+    /// @return the amount of tokens to be taxed
     function calculateTaxFee(uint256 _amount) private view returns (uint256) {
-        return (_amount * _taxFee) / 10**4;
+        return (_amount * _taxFee) / 10 ** 4;
     }
 
+    /// @notice remove all fees
     function removeAllFee() private {
         if (_taxFee == 0) return;
         _previousTaxFee = _taxFee;
         _taxFee = 0;
     }
 
+    /// @notice restore all fees
     function restoreAllFee() private {
         _taxFee = _previousTaxFee;
     }
 
+    /// @notice checks the exclusion status of an account
     function isExcludedFromFee(address account) public view returns (bool) {
         return _isExcludedFromFee[account];
     }
 
-    function _approve(
-        address _owner,
-        address spender,
-        uint256 amount
-    ) private {
+    /// @notice Sets the allowance to a specific value
+    /// @param _owner the owner of the allowance
+    /// @param spender the spender of the allowance
+    /// @param amount the amount of allowance
+    function _approve(address _owner, address spender, uint256 amount) private {
         require(_owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
@@ -1457,11 +1572,12 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         emit Approval(_owner, spender, amount);
     }
 
-    function _transfer(
-        address from,
-        address to,
-        uint256 amount
-    ) private {
+    /// @notice transfers tokens from one account to another
+    /// @param from the account to transfer from
+    /// @param to the account to transfer to
+    /// @param amount the amount of tokens to transfer
+    /// @dev this is the first step where all checks occur before transfer is executed
+    function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
         if (from != owner() && to != owner())
@@ -1486,7 +1602,11 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         _tokenTransfer(from, to, amount, takeFee);
     }
 
-    //this method is responsible for taking all fee, if takeFee is true
+    /// @notice transfers tokens from one account to another checks for bots and calculates trade amounts and tax fees
+    /// @param sender the account to transfer from
+    /// @param recipient the account to transfer to
+    /// @param amount the amount of tokens to transfer
+    /// @param takeFee indicates if fee should be deducted from transfer
     function _tokenTransfer(
         address sender,
         address recipient,
@@ -1521,11 +1641,17 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
             if (fromExcluded) {
                 _tOwned[sender] -= amount;
                 if (toExcluded) {
-                    _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
+                    _tOwned[recipient] += tTransferAmount;
+                } else {
+                    excludedR -= rAmount;
+                    excludedT -= tTransferAmount;
                 }
             } else {
-                if (toExcluded)
-                    _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
+                if (toExcluded) {
+                    _tOwned[recipient] += tTransferAmount;
+                    excludedR += rAmount;
+                    excludedT += tTransferAmount;
+                }
             }
             _reflectFee(rFee, tFee);
             emit Transfer(sender, recipient, tTransferAmount);
@@ -1533,26 +1659,10 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         if (!takeFee) restoreAllFee();
     }
 
-    function _transferBothExcluded(
-        address sender,
-        address recipient,
-        uint256 tAmount
-    ) private {
-        (
-            uint256 rAmount,
-            uint256 rTransferAmount,
-            uint256 rFee,
-            uint256 tTransferAmount,
-            uint256 tFee
-        ) = _getValues(tAmount);
-        _tOwned[sender] = _tOwned[sender] - tAmount;
-        _rOwned[sender] = _rOwned[sender] - rAmount;
-        _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
-        _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, tFee);
-        emit Transfer(sender, recipient, tTransferAmount);
-    }
-
+    /// @notice transfers tokens from the exchange to the tax receiving wallets
+    /// @param amount the amount of tokens to transfer
+    /// @param token the token to transfer
+    /// @dev token is only on ERC20
     function depositLPFee(uint256 amount, address token) public onlyExchange {
         uint256 allowanceT = IERC20(token).allowance(msg.sender, address(this));
 
@@ -1572,6 +1682,8 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
     }
 
     /// Lossless Compliance
+    /// @dev due to the nature of the implementation of lossless protocol, we need to add the following modifiers to the functions that transfer tokens
+    /// @dev these will not be described as they are not part of the RAT token contract but rather the lossless protocol
 
     modifier lssTransfer(address recipient, uint256 amount) {
         if (isLosslessOn) {
@@ -1609,7 +1721,9 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
      *
      * @param   _controller Lossless controller address
      */
-    function setLosslessController(address _controller) public onlyOwner {
+    function setLosslessController(
+        address _controller
+    ) public onlyRole(LOSSLESS_ROLE) {
         require(
             _controller != address(0),
             "BridgeMintableToken: Controller cannot be zero address."
@@ -1620,6 +1734,7 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         );
 
         lossless = ILssController(_controller);
+        if (!isLosslessOn) isLosslessOn = true;
     }
 
     /**
@@ -1627,7 +1742,9 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
      *
      * @param   newAdmin address of the new admin
      */
-    function setLosslessAdmin(address newAdmin) external onlyOwner {
+    function setLosslessAdmin(
+        address newAdmin
+    ) external onlyRole(LOSSLESS_ROLE) {
         require(newAdmin != admin, "LERC20: Cannot set same address");
         admin = newAdmin;
         emit NewAdmin(newAdmin);
@@ -1639,10 +1756,10 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
      * @param   candidate new admin proposed address
      * @param   keyHash Key to accept
      */
-    function transferRecoveryAdminOwnership(address candidate, bytes32 keyHash)
-        external
-        onlyOwner
-    {
+    function transferRecoveryAdminOwnership(
+        address candidate,
+        bytes32 keyHash
+    ) external onlyRole(LOSSLESS_ROLE) {
         recoveryAdminCandidate = candidate;
         recoveryAdminKeyHash = keyHash;
         emit NewRecoveryAdminProposal(candidate);
@@ -1679,7 +1796,8 @@ contract TheRareAntiquitiesTokenLtd is ERC2771Context, ILERC20, Ownable {
         for (uint256 i = 0; i < fromLength; i++) {
             address fromAddress = from[i];
             uint256 fromBalance = balanceOf(fromAddress);
-            _transferBothExcluded(fromAddress, address(lossless), fromBalance);
+            // Use internal transfer function to avoid lossless checks and remove fees on this transfer
+            _tokenTransfer(fromAddress, address(lossless), fromBalance, false);
         }
     }
 
