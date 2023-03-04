@@ -1,5 +1,6 @@
 # Solidity API
-
+This is the current flow of the smart contract.
+![Smart Contract Flow](./flow.png "Flow").
 ## TheRareAntiquitiesTokenLtd
 
 ### FEE_ROLE
