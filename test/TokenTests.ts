@@ -36,7 +36,26 @@ describe("Token contract", function () {
             const { token, owner } = await loadFixture(deployTokenFixture);
             expect(await token.owner()).to.equal(owner.address);
         });
-    });
+
+        it("Should set the correct totalSupply", async function () {
+            const { token } = await loadFixture(deployTokenFixture);
+            expect(await token.totalSupply()).to.equal(ethers.utils.parseUnits("500000000000", "gwei"));
+        });
+      });
+    
+    describe("Basic ERC20 functions", function() {
+
+      it("Should check allowance function", async function(){
+        const { token, owner, user1 } = await loadFixture(deployTokenFixture);
+
+        expect(await token.allowance(owner.address, user1.address)).to.equal(0);
+        // Owner approves user1 to spend 1000 tokens
+        await token.connect(owner).approve(user1.address, ethers.utils.parseUnits("1000", "gwei"));
+
+        
+      })
+
+    })
 
     describe("Set LossLess", function () {
     
