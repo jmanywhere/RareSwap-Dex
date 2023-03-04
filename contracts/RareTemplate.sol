@@ -8,920 +8,24 @@
     removed safemath
     fixed storage
     fixed swc
+    fixed Libraries.
+    fixed documentation of code.
 
 
 */
 //SPDX-License-Identifier: UNLICENSED
 
-// File: https://github.com/OpenZeppelin/openzeppelin-contracts/contracts/utils/Context.sol
-
-// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 
 pragma solidity 0.8.17;
-
+//Libraries from OpenZeppelin to be included in the code, these Libraries are secured and used here without modification.
 import "@openzeppelin/contracts/access/AccessControl.sol";
-
-// File: https://github.com/OpenZeppelin/openzeppelin-contracts/contracts/metatx/ERC2771Context.sol
-
-// OpenZeppelin Contracts (last updated v4.7.0) (metatx/ERC2771Context.sol)
-
-/**
- * @dev Context variant with ERC2771 support.
- */
-abstract contract ERC2771Context is Context {
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address private immutable _trustedForwarder;
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address trustedForwarder) {
-        _trustedForwarder = trustedForwarder;
-    }
-
-    function isTrustedForwarder(
-        address forwarder
-    ) public view virtual returns (bool) {
-        return forwarder == _trustedForwarder;
-    }
-
-    function _msgSender()
-        internal
-        view
-        virtual
-        override
-        returns (address sender)
-    {
-        if (isTrustedForwarder(msg.sender)) {
-            // The assembly code is more direct than the Solidity version using `abi.decode`.
-            /// @solidity memory-safe-assembly
-            assembly {
-                sender := shr(96, calldataload(sub(calldatasize(), 20)))
-            }
-        } else {
-            return super._msgSender();
-        }
-    }
-
-    function _msgData()
-        internal
-        view
-        virtual
-        override
-        returns (bytes calldata)
-    {
-        if (isTrustedForwarder(msg.sender)) {
-            return msg.data[:msg.data.length - 20];
-        } else {
-            return super._msgData();
-        }
-    }
-}
-
-interface IERC20 {
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    function name() external view returns (string memory);
-
-    function symbol() external view returns (string memory);
-
-    function decimals() external view returns (uint8);
-
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address owner) external view returns (uint256);
-
-    function allowance(
-        address owner,
-        address spender
-    ) external view returns (uint256);
-
-    function approve(address spender, uint256 value) external returns (bool);
-
-    function transfer(address to, uint256 value) external returns (bool);
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    ) external returns (bool);
-}
-
-interface IWETH {
-    function balanceOf(address owner) external view returns (uint256);
-
-    function allowance(
-        address owner,
-        address spender
-    ) external view returns (uint256);
-
-    function deposit() external payable;
-
-    function transfer(address to, uint256 value) external returns (bool);
-
-    function withdraw(uint256) external;
-}
-
-/**
- * @dev Collection of functions related to the address type
- */
-library Address {
-    /**
-     * @dev Returns true if `account` is a contract.
-     *
-     * [IMPORTANT]
-     * ====
-     * It is unsafe to assume that an address for which this function returns
-     * false is an externally-owned account (EOA) and not a contract.
-     *
-     * Among others, `isContract` will return false for the following
-     * types of addresses:
-     *
-     *  - an externally-owned account
-     *  - a contract in construction
-     *  - an address where a contract will be created
-     *  - an address where a contract lived, but was destroyed
-     *
-     * Furthermore, `isContract` will also return true if the target contract within
-     * the same transaction is already scheduled for destruction by `SELFDESTRUCT`,
-     * which only has an effect at the end of a transaction.
-     * ====
-     *
-     * [IMPORTANT]
-     * ====
-     * You shouldn't rely on `isContract` to protect against flash loan attacks!
-     *
-     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
-     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
-     * constructor.
-     * ====
-     */
-    function isContract(address account) internal view returns (bool) {
-        // This method relies on extcodesize/address.code.length, which returns 0
-        // for contracts in construction, since the code is only stored at the end
-        // of the constructor execution.
-
-        return account.code.length > 0;
-    }
-
-    /**
-     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to
-     * `recipient`, forwarding all available gas and reverting on errors.
-     *
-     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
-     * of certain opcodes, possibly making contracts go over the 2300 gas limit
-     * imposed by `transfer`, making them unable to receive funds via
-     * `transfer`. {sendValue} removes this limitation.
-     *
-     * https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now/[Learn more].
-     *
-     * IMPORTANT: because control is transferred to `recipient`, care must be
-     * taken to not create reentrancy vulnerabilities. Consider using
-     * {ReentrancyGuard} or the
-     * https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
-     */
-    function sendValue(address payable recipient, uint256 amount) internal {
-        require(
-            address(this).balance >= amount,
-            "Address: insufficient balance"
-        );
-
-        (bool success, ) = recipient.call{value: amount}("");
-        require(
-            success,
-            "Address: unable to send value, recipient may have reverted"
-        );
-    }
-
-    /**
-     * @dev Performs a Solidity function call using a low level `call`. A
-     * plain `call` is an unsafe replacement for a function call: use this
-     * function instead.
-     *
-     * If `target` reverts with a revert reason, it is bubbled up by this
-     * function (like regular Solidity function calls).
-     *
-     * Returns the raw returned data. To convert to the expected return value,
-     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
-     *
-     * Requirements:
-     *
-     * - `target` must be a contract.
-     * - calling `target` with `data` must not revert.
-     *
-     * _Available since v3.1._
-     */
-    function functionCall(
-        address target,
-        bytes memory data
-    ) internal returns (bytes memory) {
-        return
-            functionCallWithValue(
-                target,
-                data,
-                0,
-                "Address: low-level call failed"
-            );
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with
-     * `errorMessage` as a fallback revert reason when `target` reverts.
-     *
-     * _Available since v3.1._
-     */
-    function functionCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        return functionCallWithValue(target, data, 0, errorMessage);
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but also transferring `value` wei to `target`.
-     *
-     * Requirements:
-     *
-     * - the calling contract must have an ETH balance of at least `value`.
-     * - the called Solidity function must be `payable`.
-     *
-     * _Available since v3.1._
-     */
-    function functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 value
-    ) internal returns (bytes memory) {
-        return
-            functionCallWithValue(
-                target,
-                data,
-                value,
-                "Address: low-level call with value failed"
-            );
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but
-     * with `errorMessage` as a fallback revert reason when `target` reverts.
-     *
-     * _Available since v3.1._
-     */
-    function functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 value,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        require(
-            address(this).balance >= value,
-            "Address: insufficient balance for call"
-        );
-        (bool success, bytes memory returndata) = target.call{value: value}(
-            data
-        );
-        return
-            verifyCallResultFromTarget(
-                target,
-                success,
-                returndata,
-                errorMessage
-            );
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but performing a static call.
-     *
-     * _Available since v3.3._
-     */
-    function functionStaticCall(
-        address target,
-        bytes memory data
-    ) internal view returns (bytes memory) {
-        return
-            functionStaticCall(
-                target,
-                data,
-                "Address: low-level static call failed"
-            );
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
-     * but performing a static call.
-     *
-     * _Available since v3.3._
-     */
-    function functionStaticCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal view returns (bytes memory) {
-        (bool success, bytes memory returndata) = target.staticcall(data);
-        return
-            verifyCallResultFromTarget(
-                target,
-                success,
-                returndata,
-                errorMessage
-            );
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but performing a delegate call.
-     *
-     * _Available since v3.4._
-     */
-    function functionDelegateCall(
-        address target,
-        bytes memory data
-    ) internal returns (bytes memory) {
-        return
-            functionDelegateCall(
-                target,
-                data,
-                "Address: low-level delegate call failed"
-            );
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
-     * but performing a delegate call.
-     *
-     * _Available since v3.4._
-     */
-    function functionDelegateCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        (bool success, bytes memory returndata) = target.delegatecall(data);
-        return
-            verifyCallResultFromTarget(
-                target,
-                success,
-                returndata,
-                errorMessage
-            );
-    }
-
-    /**
-     * @dev Tool to verify that a low level call to smart-contract was successful, and revert (either by bubbling
-     * the revert reason or using the provided one) in case of unsuccessful call or if target was not a contract.
-     *
-     * _Available since v4.8._
-     */
-    function verifyCallResultFromTarget(
-        address target,
-        bool success,
-        bytes memory returndata,
-        string memory errorMessage
-    ) internal view returns (bytes memory) {
-        if (success) {
-            if (returndata.length == 0) {
-                // only check isContract if the call was successful and the return data is empty
-                // otherwise we already know that it was a contract
-                require(isContract(target), "Address: call to non-contract");
-            }
-            return returndata;
-        } else {
-            _revert(returndata, errorMessage);
-        }
-    }
-
-    /**
-     * @dev Tool to verify that a low level call was successful, and revert if it wasn't, either by bubbling the
-     * revert reason or using the provided one.
-     *
-     * _Available since v4.3._
-     */
-    function verifyCallResult(
-        bool success,
-        bytes memory returndata,
-        string memory errorMessage
-    ) internal pure returns (bytes memory) {
-        if (success) {
-            return returndata;
-        } else {
-            _revert(returndata, errorMessage);
-        }
-    }
-
-    function _revert(
-        bytes memory returndata,
-        string memory errorMessage
-    ) private pure {
-        // Look for revert reason and bubble it up if present
-        if (returndata.length > 0) {
-            // The easiest way to bubble the revert reason is using memory via assembly
-            /// @solidity memory-safe-assembly
-            assembly {
-                let returndata_size := mload(returndata)
-                revert(add(32, returndata), returndata_size)
-            }
-        } else {
-            revert(errorMessage);
-        }
-    }
-}
-
-contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial owner.
-     */
-    constructor() {
-        address msgSender = _msgSender();
-        _owner = msgSender;
-        emit OwnershipTransferred(address(0), msgSender);
-    }
-
-    /**
-     * @dev Returns the address of the current owner.
-     */
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(_owner == _msgSender(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public virtual onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(
-            newOwner != address(0),
-            "Ownable: new owner is the zero address"
-        );
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-interface IRARESwapFactory {
-    event PairCreated(
-        address indexed token0,
-        address indexed token1,
-        address pair,
-        uint256
-    );
-
-    function feeTo() external view returns (address);
-
-    function feeToSetter() external view returns (address);
-
-    function getPair(
-        address tokenA,
-        address tokenB
-    ) external view returns (address pair);
-
-    function allPairs(uint256) external view returns (address pair);
-
-    function allPairsLength() external view returns (uint256);
-
-    function pairExist(address pair) external view returns (bool);
-
-    function createPair(
-        address tokenA,
-        address tokenB
-    ) external returns (address pair);
-
-    function setFeeTo(address) external;
-
-    function setFeeToSetter(address) external;
-
-    function routerInitialize(address) external;
-
-    function routerAddress() external view returns (address);
-}
-
-interface IRARESwapPair {
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    function baseToken() external view returns (address);
-
-    function getTotalFee() external view returns (uint256);
-
-    function name() external pure returns (string memory);
-
-    function symbol() external pure returns (string memory);
-
-    function decimals() external pure returns (uint8);
-
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address owner) external view returns (uint256);
-
-    function allowance(
-        address owner,
-        address spender
-    ) external view returns (uint256);
-
-    function updateTotalFee(uint256 totalFee) external returns (bool);
-
-    function approve(address spender, uint256 value) external returns (bool);
-
-    function transfer(address to, uint256 value) external returns (bool);
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    ) external returns (bool);
-
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-
-    function PERMIT_TYPEHASH() external pure returns (bytes32);
-
-    function nonces(address owner) external view returns (uint256);
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-
-    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
-    event Burn(
-        address indexed sender,
-        uint256 amount0,
-        uint256 amount1,
-        address indexed to
-    );
-    event Swap(
-        address indexed sender,
-        uint256 amount0In,
-        uint256 amount1In,
-        uint256 amount0Out,
-        uint256 amount1Out,
-        address indexed to
-    );
-    event Sync(uint112 reserve0, uint112 reserve1);
-
-    function MINIMUM_LIQUIDITY() external pure returns (uint256);
-
-    function factory() external view returns (address);
-
-    function token0() external view returns (address);
-
-    function token1() external view returns (address);
-
-    function getReserves()
-        external
-        view
-        returns (
-            uint112 reserve0,
-            uint112 reserve1,
-            uint32 blockTimestampLast,
-            address _baseToken
-        );
-
-    function price0CumulativeLast() external view returns (uint256);
-
-    function price1CumulativeLast() external view returns (uint256);
-
-    function kLast() external view returns (uint256);
-
-    function mint(address to) external returns (uint256 liquidity);
-
-    function burn(
-        address to
-    ) external returns (uint256 amount0, uint256 amount1);
-
-    function swap(
-        uint256 amount0Out,
-        uint256 amount1Out,
-        uint256 amount0Fee,
-        uint256 amount1Fee,
-        address to,
-        bytes calldata data
-    ) external;
-
-    function skim(address to) external;
-
-    function sync() external;
-
-    function initialize(address, address) external;
-
-    function setBaseToken(address _baseToken) external;
-}
-
-interface IRARESwapRouter01 {
-    function factory() external pure returns (address);
-
-    function WETH() external pure returns (address);
-
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
-
-    function addLiquidityETH(
-        address token,
-        uint256 amountTokenDesired,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    )
-        external
-        payable
-        returns (uint256 amountToken, uint256 amountETH, uint256 liquidity);
-
-    function removeLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 liquidity,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountA, uint256 amountB);
-
-    function removeLiquidityETH(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountToken, uint256 amountETH);
-
-    function removeLiquidityWithPermit(
-        address tokenA,
-        address tokenB,
-        uint256 liquidity,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline,
-        bool approveMax,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external returns (uint256 amountA, uint256 amountB);
-
-    function removeLiquidityETHWithPermit(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline,
-        bool approveMax,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external returns (uint256 amountToken, uint256 amountETH);
-
-    function swapExactTokensForTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapTokensForExactTokens(
-        uint256 amountOut,
-        uint256 amountInMax,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapExactETHForTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
-
-    function swapTokensForExactETH(
-        uint256 amountOut,
-        uint256 amountInMax,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapExactTokensForETH(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapETHForExactTokens(
-        uint256 amountOut,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
-
-    function quote(
-        uint256 amountA,
-        uint256 reserveA,
-        uint256 reserveB
-    ) external pure returns (uint256 amountB);
-
-    function getAmountOut(
-        uint256 amountIn,
-        uint256 reserveIn,
-        uint256 reserveOut
-    ) external pure returns (uint256 amountOut);
-
-    function getAmountIn(
-        uint256 amountOut,
-        uint256 reserveIn,
-        uint256 reserveOut
-    ) external pure returns (uint256 amountIn);
-
-    function getAmountsOut(
-        uint256 amountIn,
-        address[] calldata path
-    ) external view returns (uint256[] memory amounts);
-
-    function getAmountsIn(
-        uint256 amountOut,
-        address[] calldata path
-    ) external view returns (uint256[] memory amounts);
-}
-
-interface IRARESwapRouter is IRARESwapRouter01 {
-    function removeLiquidityETHSupportingFeeOnTransferTokens(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountETH);
-
-    function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline,
-        bool approveMax,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external returns (uint256 amountETH);
-
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external;
-
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable;
-
-    function swapExactTokensForETHSupportingFeeOnTransferTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external;
-
-    function pairFeeAddress(address pair) external view returns (address);
-
-    function adminFee() external view returns (uint256);
-
-    function feeAddressGet() external view returns (address);
-}
-
-interface ILERC20 {
-    function name() external view returns (string memory);
-
-    function admin() external view returns (address);
-
-    function getAdmin() external view returns (address);
-
-    function symbol() external view returns (string memory);
-
-    function decimals() external view returns (uint8);
-
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address _account) external view returns (uint256);
-
-    function transfer(
-        address _recipient,
-        uint256 _amount
-    ) external returns (bool);
-
-    function allowance(
-        address _owner,
-        address _spender
-    ) external view returns (uint256);
-
-    function approve(address _spender, uint256 _amount) external returns (bool);
-
-    function transferFrom(
-        address _sender,
-        address _recipient,
-        uint256 _amount
-    ) external returns (bool);
-
-    function increaseAllowance(
-        address _spender,
-        uint256 _addedValue
-    ) external returns (bool);
-
-    function decreaseAllowance(
-        address _spender,
-        uint256 _subtractedValue
-    ) external returns (bool);
-
-    function transferOutBlacklistedFunds(address[] calldata _from) external;
-
-    function setLosslessAdmin(address _newAdmin) external;
-
-    function transferRecoveryAdminOwnership(
-        address _candidate,
-        bytes32 _keyHash
-    ) external;
-
-    function acceptRecoveryAdminOwnership(bytes memory _key) external;
-
-    function proposeLosslessTurnOff() external;
-
-    function executeLosslessTurnOff() external;
-
-    function executeLosslessTurnOn() external;
-
-    event Transfer(address indexed _from, address indexed _to, uint256 _value);
-    event Approval(
-        address indexed _owner,
-        address indexed _spender,
-        uint256 _value
-    );
-    event NewAdmin(address indexed _newAdmin);
-    event NewRecoveryAdminProposal(address indexed _candidate);
-    event NewRecoveryAdmin(address indexed _newAdmin);
-    event LosslessTurnOffProposal(uint256 _turnOffDate);
-    event LosslessOff();
-    event LosslessOn();
-}
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import "../interfaces/IRareDex.sol";
+import "../interfaces/ILERC20.sol";
 
 contract TheRareAntiquitiesTokenLtd is
     ERC2771Context,
@@ -937,41 +41,43 @@ contract TheRareAntiquitiesTokenLtd is
     bytes32 public constant LOSSLESS_ROLE = keccak256("LOSSLESS");
     bytes32 public constant MAX_ROLE = keccak256("MAX");
     bytes32 public constant BOT_ROLE = keccak256("BOT");
-
+//Inclusion of address library into our code for simplicity.
     using Address for address;
-
+///all mappings documented in this section
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => bool) private _isExcludedFromFee;
+    mapping(address => bool) private _isExcluded;
+    mapping(address => bool) private _isExcludedFromFee;
+    mapping(address => bool) private _isExcluded;
+    mapping(address => bool) private botWallets;
+//events documented here so they are recorded in the chain, later this are called on the functions.
     event Log(string, uint256);
     event AuditLog(string, address);
+
+//Wrapped Token from chain defined and wallets definition for code.
     address public immutable WETH;
-
-    mapping(address => bool) private _isExcludedFromFee;
-
-    mapping(address => bool) private _isExcluded;
+    address public marketingWallet; // marketing wallet address
+    address public antiquitiesWallet; // antiquities Wallet address
+    address public gasWallet; // gas Wallet address
+    address public immutable depWallet; // dep Wallet address
 
     // Exclusion amounts
     uint private excludedT;
     uint private excludedR;
-
-    mapping(address => bool) private botWallets;
+//Trade Definition
     bool public botsCantrade = false;
-
     bool public canTrade = false;
-
+//Token Information, including name, symbol and supply
     uint256 private constant MAX = ~uint256(0);
     uint256 private _tTotal = 500_000_000_000 gwei;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
-    address public marketingWallet; // marketing wallet address
-    address public antiquitiesWallet; // antiquities Wallet address
-    address public gasWallet; // gas Wallet address
-
     string public constant name = "The Rare Antiquities Token";
     string public constant symbol = "TRAT";
     uint8 public constant decimals = 9;
-
+//Tax Definition for code and public reference. 
     uint256 private _taxFee = 100; // reflection tax in BPS
     uint256 private _previousTaxFee = _taxFee;
 
@@ -983,16 +89,16 @@ contract TheRareAntiquitiesTokenLtd is
     uint256 private _gasFee = 100; // gas tax in BPS
 
     uint256 public _totalTax =
-        _taxFee + _marketingFee + _antiquitiesFee + _gasFee;
-
+        _taxFee + _marketingFee + _antiquitiesFee + _gasFee; //Total Tax to be collected.
+//Swap and Router definition for the code and pair creation.addmod
     IRARESwapRouter public immutable rareSwapRouter;
     address public immutable rareSwapPair;
-    address public immutable depWallet;
-
+//Max Limits Definition
     uint256 public _maxTxAmount = 500_000_000_000 gwei; // total supply by default, can be changed at will
     uint256 public _maxWallet = 5_000_000_000 gwei; // 1% max wallet by default, can be changed at will
 
     /// Lossless Compliance
+    //You can read more on https://docs.lossless.io/protocol/technical-reference/hack-mitigation-protocol
     address public admin;
     address public recoveryAdmin;
     address private recoveryAdminCandidate;
@@ -1001,7 +107,7 @@ contract TheRareAntiquitiesTokenLtd is
     uint256 public losslessTurnOffTimestamp;
     bool public isLosslessOn = false;
     ILssController public lossless;
-
+//Modifier to identify pair and ensure is only RareSwap
     modifier onlyExchange() {
         bool isPair = false;
         if (msg.sender == rareSwapPair) isPair = true;
@@ -1012,7 +118,7 @@ contract TheRareAntiquitiesTokenLtd is
         );
         _;
     }
-
+//Code Deployer Configuration for wallets, these wallets are used to collect taxes.
     constructor(
         address _marketingWallet,
         address _antiquitiesWallet,
@@ -1048,13 +154,15 @@ contract TheRareAntiquitiesTokenLtd is
 
         depWallet = 0x611980Ea951D956Bd04C39A5A176EaB35EB93982;
         //exclude owner and this contract from fee
+        //exclude definition to avoid problems with swap,router and owner or marketing wallets from getting fees.
+
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         _isExcludedFromFee[depWallet] = true;
         _isExcludedFromFee[gasWallet] = true;
         _isExcludedFromFee[marketingWallet] = true;
         _isExcludedFromFee[antiquitiesWallet] = true;
-
+//exclude from getting reflections.
         excludeFromReward(address(this));
         excludeFromReward(depWallet);
         excludeFromReward(gasWallet);
@@ -1062,14 +170,14 @@ contract TheRareAntiquitiesTokenLtd is
         excludeFromReward(antiquitiesWallet);
         excludeFromReward(rareSwapPair);
         excludeFromReward(address(rareSwapRouter));
-
+//define those that Have permissions using access roles.
         require(adminRoles.length == 5, "ERR: INVALID_ADMIN_ROLES");
         _grantRole(MAX_ROLE, adminRoles[0]);
         _grantRole(LOSSLESS_ROLE, adminRoles[1]);
         _grantRole(FEE_ROLE, adminRoles[2]);
         _grantRole(WALLET_ROLE, adminRoles[3]);
         _grantRole(BOT_ROLE, adminRoles[4]);
-
+//transfer tokens to owner after mint or creation
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
 
@@ -1683,8 +791,8 @@ contract TheRareAntiquitiesTokenLtd is
 
     /// Lossless Compliance
     /// @dev due to the nature of the implementation of lossless protocol, we need to add the following modifiers to the functions that transfer tokens
-    /// @dev these will not be described as they are not part of the RAT token contract but rather the lossless protocol
-
+    /// @dev these will not be described as they are not part of the RAT token contract but rather the lossless protoco. 
+    // more information about lossless in their documentation https://docs.lossless.io/protocol/technical-reference/hack-mitigation-protocol
     modifier lssTransfer(address recipient, uint256 amount) {
         if (isLosslessOn) {
             lossless.beforeTransfer(_msgSender(), recipient, amount);
@@ -1861,3 +969,4 @@ interface ILssController {
 
     function beforeBurn(address _account, uint256 _amount) external;
 }
+//Blade/Semi final review and doc.
