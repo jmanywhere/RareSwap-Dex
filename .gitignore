@@ -6,3 +6,6 @@ cache
 artifacts
 typechain-types/*
 build/*
+
+coverage/
+coverage.json
