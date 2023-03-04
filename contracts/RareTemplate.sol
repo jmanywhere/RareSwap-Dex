@@ -8,17 +8,16 @@
     removed safemath
     fixed storage
     fixed swc
+    fixed Libraries.
+    fixed documentation of code.
 
 
 */
 //SPDX-License-Identifier: UNLICENSED
 
-// File: https://github.com/OpenZeppelin/openzeppelin-contracts/contracts/utils/Context.sol
-
-// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 
 pragma solidity 0.8.17;
-
+//Libraries from OpenZeppelin to be included in the code, these Libraries are secured and used here without modification.
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -42,41 +41,43 @@ contract TheRareAntiquitiesTokenLtd is
     bytes32 public constant LOSSLESS_ROLE = keccak256("LOSSLESS");
     bytes32 public constant MAX_ROLE = keccak256("MAX");
     bytes32 public constant BOT_ROLE = keccak256("BOT");
-
+//Inclusion of address library into our code for simplicity.
     using Address for address;
-
+///all mappings documented in this section
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => bool) private _isExcludedFromFee;
+    mapping(address => bool) private _isExcluded;
+    mapping(address => bool) private _isExcludedFromFee;
+    mapping(address => bool) private _isExcluded;
+    mapping(address => bool) private botWallets;
+//events documented here so they are recorded in the chain, later this are called on the functions.
     event Log(string, uint256);
     event AuditLog(string, address);
+
+//Wrapped Token from chain defined and wallets definition for code.
     address public immutable WETH;
-
-    mapping(address => bool) private _isExcludedFromFee;
-
-    mapping(address => bool) private _isExcluded;
+    address public marketingWallet; // marketing wallet address
+    address public antiquitiesWallet; // antiquities Wallet address
+    address public gasWallet; // gas Wallet address
+    address public immutable depWallet; // dep Wallet address
 
     // Exclusion amounts
     uint private excludedT;
     uint private excludedR;
-
-    mapping(address => bool) private botWallets;
+//Trade Definition
     bool public botsCantrade = false;
-
     bool public canTrade = false;
-
+//Token Information, including name, symbol and supply
     uint256 private constant MAX = ~uint256(0);
     uint256 private _tTotal = 500_000_000_000 gwei;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
-    address public marketingWallet; // marketing wallet address
-    address public antiquitiesWallet; // antiquities Wallet address
-    address public gasWallet; // gas Wallet address
-
     string public constant name = "The Rare Antiquities Token";
     string public constant symbol = "TRAT";
     uint8 public constant decimals = 9;
-
+//Tax Definition for code and public reference. 
     uint256 private _taxFee = 100; // reflection tax in BPS
     uint256 private _previousTaxFee = _taxFee;
 
@@ -88,16 +89,16 @@ contract TheRareAntiquitiesTokenLtd is
     uint256 private _gasFee = 100; // gas tax in BPS
 
     uint256 public _totalTax =
-        _taxFee + _marketingFee + _antiquitiesFee + _gasFee;
-
+        _taxFee + _marketingFee + _antiquitiesFee + _gasFee; //Total Tax to be collected.
+//Swap and Router definition for the code and pair creation.addmod
     IRARESwapRouter public immutable rareSwapRouter;
     address public immutable rareSwapPair;
-    address public immutable depWallet;
-
+//Max Limits Definition
     uint256 public _maxTxAmount = 500_000_000_000 gwei; // total supply by default, can be changed at will
     uint256 public _maxWallet = 5_000_000_000 gwei; // 1% max wallet by default, can be changed at will
 
     /// Lossless Compliance
+    //You can read more on https://docs.lossless.io/protocol/technical-reference/hack-mitigation-protocol
     address public admin;
     address public recoveryAdmin;
     address private recoveryAdminCandidate;
@@ -106,7 +107,7 @@ contract TheRareAntiquitiesTokenLtd is
     uint256 public losslessTurnOffTimestamp;
     bool public isLosslessOn = false;
     ILssController public lossless;
-
+//Modifier to identify pair and ensure is only RareSwap
     modifier onlyExchange() {
         bool isPair = false;
         if (msg.sender == rareSwapPair) isPair = true;
@@ -117,7 +118,7 @@ contract TheRareAntiquitiesTokenLtd is
         );
         _;
     }
-
+//Code Deployer Configuration for wallets, these wallets are used to collect taxes.
     constructor(
         address _marketingWallet,
         address _antiquitiesWallet,
@@ -153,13 +154,15 @@ contract TheRareAntiquitiesTokenLtd is
 
         depWallet = 0x611980Ea951D956Bd04C39A5A176EaB35EB93982;
         //exclude owner and this contract from fee
+        //exclude definition to avoid problems with swap,router and owner or marketing wallets from getting fees.
+
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         _isExcludedFromFee[depWallet] = true;
         _isExcludedFromFee[gasWallet] = true;
         _isExcludedFromFee[marketingWallet] = true;
         _isExcludedFromFee[antiquitiesWallet] = true;
-
+//exclude from getting reflections.
         excludeFromReward(address(this));
         excludeFromReward(depWallet);
         excludeFromReward(gasWallet);
@@ -167,14 +170,14 @@ contract TheRareAntiquitiesTokenLtd is
         excludeFromReward(antiquitiesWallet);
         excludeFromReward(rareSwapPair);
         excludeFromReward(address(rareSwapRouter));
-
+//define those that Have permissions using access roles.
         require(adminRoles.length == 5, "ERR: INVALID_ADMIN_ROLES");
         _grantRole(MAX_ROLE, adminRoles[0]);
         _grantRole(LOSSLESS_ROLE, adminRoles[1]);
         _grantRole(FEE_ROLE, adminRoles[2]);
         _grantRole(WALLET_ROLE, adminRoles[3]);
         _grantRole(BOT_ROLE, adminRoles[4]);
-
+//transfer tokens to owner after mint or creation
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
 
@@ -788,8 +791,8 @@ contract TheRareAntiquitiesTokenLtd is
 
     /// Lossless Compliance
     /// @dev due to the nature of the implementation of lossless protocol, we need to add the following modifiers to the functions that transfer tokens
-    /// @dev these will not be described as they are not part of the RAT token contract but rather the lossless protocol
-
+    /// @dev these will not be described as they are not part of the RAT token contract but rather the lossless protoco. 
+    // more information about lossless in their documentation https://docs.lossless.io/protocol/technical-reference/hack-mitigation-protocol
     modifier lssTransfer(address recipient, uint256 amount) {
         if (isLosslessOn) {
             lossless.beforeTransfer(_msgSender(), recipient, amount);
@@ -966,3 +969,4 @@ interface ILssController {
 
     function beforeBurn(address _account, uint256 _amount) external;
 }
+//Blade/Semi final review and doc.
