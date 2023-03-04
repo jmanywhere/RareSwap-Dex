@@ -15,7 +15,6 @@
 */
 //SPDX-License-Identifier: UNLICENSED
 
-
 pragma solidity 0.8.17;
 //Libraries from OpenZeppelin to be included in the code, these Libraries are secured and used here without modification.
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -41,22 +40,20 @@ contract TheRareAntiquitiesTokenLtd is
     bytes32 public constant LOSSLESS_ROLE = keccak256("LOSSLESS");
     bytes32 public constant MAX_ROLE = keccak256("MAX");
     bytes32 public constant BOT_ROLE = keccak256("BOT");
-//Inclusion of address library into our code for simplicity.
+    //Inclusion of address library into our code for simplicity.
     using Address for address;
-///all mappings documented in this section
+    ///all mappings documented in this section
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
     mapping(address => bool) private _isExcludedFromFee;
     mapping(address => bool) private _isExcluded;
-    mapping(address => bool) private _isExcludedFromFee;
-    mapping(address => bool) private _isExcluded;
     mapping(address => bool) private botWallets;
-//events documented here so they are recorded in the chain, later this are called on the functions.
+    //events documented here so they are recorded in the chain, later this are called on the functions.
     event Log(string, uint256);
     event AuditLog(string, address);
 
-//Wrapped Token from chain defined and wallets definition for code.
+    //Wrapped Token from chain defined and wallets definition for code.
     address public immutable WETH;
     address public marketingWallet; // marketing wallet address
     address public antiquitiesWallet; // antiquities Wallet address
@@ -66,10 +63,10 @@ contract TheRareAntiquitiesTokenLtd is
     // Exclusion amounts
     uint private excludedT;
     uint private excludedR;
-//Trade Definition
+    //Trade Definition
     bool public botsCantrade = false;
     bool public canTrade = false;
-//Token Information, including name, symbol and supply
+    //Token Information, including name, symbol and supply
     uint256 private constant MAX = ~uint256(0);
     uint256 private _tTotal = 500_000_000_000 gwei;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
@@ -77,7 +74,7 @@ contract TheRareAntiquitiesTokenLtd is
     string public constant name = "The Rare Antiquities Token";
     string public constant symbol = "TRAT";
     uint8 public constant decimals = 9;
-//Tax Definition for code and public reference. 
+    //Tax Definition for code and public reference.
     uint256 private _taxFee = 100; // reflection tax in BPS
     uint256 private _previousTaxFee = _taxFee;
 
@@ -90,10 +87,10 @@ contract TheRareAntiquitiesTokenLtd is
 
     uint256 public _totalTax =
         _taxFee + _marketingFee + _antiquitiesFee + _gasFee; //Total Tax to be collected.
-//Swap and Router definition for the code and pair creation.addmod
+    //Swap and Router definition for the code and pair creation.addmod
     IRARESwapRouter public immutable rareSwapRouter;
     address public immutable rareSwapPair;
-//Max Limits Definition
+    //Max Limits Definition
     uint256 public _maxTxAmount = 500_000_000_000 gwei; // total supply by default, can be changed at will
     uint256 public _maxWallet = 5_000_000_000 gwei; // 1% max wallet by default, can be changed at will
 
@@ -107,7 +104,7 @@ contract TheRareAntiquitiesTokenLtd is
     uint256 public losslessTurnOffTimestamp;
     bool public isLosslessOn = false;
     ILssController public lossless;
-//Modifier to identify pair and ensure is only RareSwap
+    //Modifier to identify pair and ensure is only RareSwap
     modifier onlyExchange() {
         bool isPair = false;
         if (msg.sender == rareSwapPair) isPair = true;
@@ -118,7 +115,8 @@ contract TheRareAntiquitiesTokenLtd is
         );
         _;
     }
-//Code Deployer Configuration for wallets, these wallets are used to collect taxes.
+
+    //Code Deployer Configuration for wallets, these wallets are used to collect taxes.
     constructor(
         address _marketingWallet,
         address _antiquitiesWallet,
@@ -162,7 +160,7 @@ contract TheRareAntiquitiesTokenLtd is
         _isExcludedFromFee[gasWallet] = true;
         _isExcludedFromFee[marketingWallet] = true;
         _isExcludedFromFee[antiquitiesWallet] = true;
-//exclude from getting reflections.
+        //exclude from getting reflections.
         excludeFromReward(address(this));
         excludeFromReward(depWallet);
         excludeFromReward(gasWallet);
@@ -170,14 +168,14 @@ contract TheRareAntiquitiesTokenLtd is
         excludeFromReward(antiquitiesWallet);
         excludeFromReward(rareSwapPair);
         excludeFromReward(address(rareSwapRouter));
-//define those that Have permissions using access roles.
+        //define those that Have permissions using access roles.
         require(adminRoles.length == 5, "ERR: INVALID_ADMIN_ROLES");
         _grantRole(MAX_ROLE, adminRoles[0]);
         _grantRole(LOSSLESS_ROLE, adminRoles[1]);
         _grantRole(FEE_ROLE, adminRoles[2]);
         _grantRole(WALLET_ROLE, adminRoles[3]);
         _grantRole(BOT_ROLE, adminRoles[4]);
-//transfer tokens to owner after mint or creation
+        //transfer tokens to owner after mint or creation
         emit Transfer(address(0), _msgSender(), _tTotal);
     }
 
@@ -791,7 +789,7 @@ contract TheRareAntiquitiesTokenLtd is
 
     /// Lossless Compliance
     /// @dev due to the nature of the implementation of lossless protocol, we need to add the following modifiers to the functions that transfer tokens
-    /// @dev these will not be described as they are not part of the RAT token contract but rather the lossless protoco. 
+    /// @dev these will not be described as they are not part of the RAT token contract but rather the lossless protoco.
     // more information about lossless in their documentation https://docs.lossless.io/protocol/technical-reference/hack-mitigation-protocol
     modifier lssTransfer(address recipient, uint256 amount) {
         if (isLosslessOn) {
