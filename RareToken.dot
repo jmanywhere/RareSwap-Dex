@@ -1,0 +1,101 @@
+strict digraph {
+  Log [shape=hexagon]
+  AuditLog [shape=hexagon]
+  constructor
+  setBaseToken
+  excludeFromReward
+  _grantRole
+  Transfer
+  setMaxWalletAmount
+  totalSupply [color=yellow]
+  balanceOf [color=yellow]
+  transfer
+  _transfer
+  allowance [color=yellow]
+  approve
+  _approve
+  transferFrom
+  increaseAllowance
+  decreaseAllowance
+  isExcludedFromReward [color=yellow]
+  totalFees [color=yellow]
+  deliver
+  reflectionFromToken [color=yellow]
+  tokenFromReflection [color=yellow]
+  _updatePairsFee [color=gray]
+  excludeFromFee
+  includeInFee
+  setMarketingWallet
+  setAntiquitiesWallet
+  setGasWallet
+  setMaxTxAmount
+  clearStuckBalance
+  _msgSender [color=gray]
+  _msgData [color=gray]
+  claimERCtokens
+  addBotWallet
+  removeBotWallet
+  getBotWalletStatus [color=yellow]
+  enableTrading
+  setFees
+  receive [color=brown]
+  _reflectFee
+  _getValues [color=yellow]
+  _getTValues [color=yellow]
+  _getRValues [color=green]
+  _getRate [color=yellow]
+  _getCurrentSupply [color=yellow]
+  calculateTaxFee [color=yellow]
+  removeAllFee
+  restoreAllFee
+  isExcludedFromFee [color=yellow]
+  Approval
+  _tokenTransfer
+  depositLPFee
+  setLosslessController
+  setLosslessAdmin
+  NewAdmin
+  transferRecoveryAdminOwnership
+  NewRecoveryAdminProposal
+  acceptRecoveryAdminOwnership
+  NewRecoveryAdmin
+  transferOutBlacklistedFunds
+  proposeLosslessTurnOff
+  LosslessTurnOffProposal
+  executeLosslessTurnOff
+  LosslessOff
+  executeLosslessTurnOn
+  LosslessOn
+  getAdmin [color=yellow]
+  beforeTransfer
+  beforeTransferFrom
+  beforeMint
+  beforeBurn
+  constructor -> setBaseToken
+  constructor -> excludeFromReward
+  constructor -> _grantRole
+  constructor -> Transfer
+  setMaxWalletAmount -> Log
+  transfer -> _transfer
+  approve -> _approve
+  transferFrom -> _transfer
+  transferFrom -> _approve
+  increaseAllowance -> _approve
+  decreaseAllowance -> _approve
+  excludeFromFee -> AuditLog
+  includeInFee -> AuditLog
+  setMarketingWallet -> AuditLog
+  setAntiquitiesWallet -> AuditLog
+  setGasWallet -> AuditLog
+  setMaxTxAmount -> Log
+  setFees -> _updatePairsFee
+  _approve -> Approval
+  _transfer -> _tokenTransfer
+  setLosslessAdmin -> NewAdmin
+  transferRecoveryAdminOwnership -> NewRecoveryAdminProposal
+  acceptRecoveryAdminOwnership -> NewRecoveryAdmin
+  proposeLosslessTurnOff -> LosslessTurnOffProposal
+  executeLosslessTurnOff -> LosslessOff
+  executeLosslessTurnOn -> LosslessOn
+}
+
