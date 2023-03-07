@@ -41,18 +41,52 @@ describe("Token contract", function () {
             const { token } = await loadFixture(deployTokenFixture);
             expect(await token.totalSupply()).to.equal(ethers.utils.parseUnits("500000000000", "gwei"));
         });
+
+        it("Should have init fees as zero", async function () {
+            const { token } = await loadFixture(deployTokenFixture);
+            expect(await token.totalFees()).to.equal(0);
+        })
+
       });
     
     describe("Basic ERC20 functions", function() {
 
-      it("Should check allowance function", async function(){
+      it("Should check approve function", async function(){
         const { token, owner, user1 } = await loadFixture(deployTokenFixture);
 
         expect(await token.allowance(owner.address, user1.address)).to.equal(0);
         // Owner approves user1 to spend 1000 tokens
         await token.connect(owner).approve(user1.address, ethers.utils.parseUnits("1000", "gwei"));
-
         
+        expect(await token.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseUnits("1000", "gwei"));
+      })
+
+      it("Should increase Allowance", async function(){
+        const { token, owner, user1 } = await loadFixture(deployTokenFixture);
+
+        expect(await token.allowance(owner.address, user1.address)).to.equal(0);
+        // Owner approves user1 to spend 1000 tokens
+        await token.connect(owner).approve(user1.address, ethers.utils.parseUnits("1000", "gwei"));
+        
+        expect(await token.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseUnits("1000", "gwei"));
+
+        await token.connect(owner).increaseAllowance(user1.address, ethers.utils.parseUnits("1000", "gwei"));
+
+        expect(await token.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseUnits("2000", "gwei"));
+      })
+
+      it("Should decrease allowance", async function(){
+        const { token, owner, user1 } = await loadFixture(deployTokenFixture);
+
+        expect(await token.allowance(owner.address, user1.address)).to.equal(0);
+        // Owner approves user1 to spend 1000 tokens
+        await token.connect(owner).approve(user1.address, ethers.utils.parseUnits("1000", "gwei"));
+        
+        expect(await token.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseUnits("1000", "gwei"));
+
+        await token.connect(owner).decreaseAllowance(user1.address, ethers.utils.parseUnits("500", "gwei"));
+
+        expect(await token.allowance(owner.address, user1.address)).to.equal(ethers.utils.parseUnits("500", "gwei"));
       })
 
     })
@@ -338,7 +372,20 @@ describe("Token contract", function () {
           })
         })
       })
+
+      describe("Set Fees", () => {
+        it("should fail if not Fee role", async () => {
+          const { token, user1 } = await loadFixture(deployTokenFixture);
+          await expect(token.connect(user1).setFees(1, 1, 1, 1)).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${FEE_ROLE}`)
+        })
+        it("should succeed if fee is <15%", async()=>{
+          const { token, user2 } = await loadFixture(deployTokenFixture);
+          await token.connect(user2).setFees(100, 100, 100, 100)
+          expect(await token._totalTax()).to.be.equal(400)
+        })
+      })
     })
+
     describe("Token Transactions", () => {
       describe("Transfer", () => {
         let transferAmount = ethers.utils.parseUnits("1000", "gwei")
@@ -347,6 +394,13 @@ describe("Token contract", function () {
         it("should fail if trading is not enabled", async () => {
           const { token, user1, user2 } = await loadFixture(deployTokenFixture);
           await expect(token.connect(user1).transfer(user2.address, transferAmount)).to.be.revertedWith("Trade disabled");
+        })
+
+        it("should fail if sender is a bot", async() => {
+          const { token, owner, user4, user1, user3, botWallet } = await loadFixture(deployTokenFixture);
+          await token.connect(owner).enableTrading()
+          await token.connect(user4).addBotWallet(user3.address)
+          await expect(token.connect(user1).transfer(user3.address, transferAmount)).to.be.revertedWith("bots arent allowed to trade")
         })
 
         describe("when sender is excluded from fee", () => {
@@ -407,6 +461,17 @@ describe("Token contract", function () {
             await token.connect(user1).transfer(user2.address, transferAmount);
             expect(await token.balanceOf(user2.address)).to.be.greaterThan(totalTransferred);
             expect(await token.balanceOf(user1.address)).to.be.greaterThan(transferAmount.mul(4));
+            expect(await token.totalFees()).to.be.greaterThan(0);
+          })
+          it("should deliver/burn some tokens", async()=>{
+            const { token,owner, user1, user2 } = await loadFixture(deployTokenFixture);
+            await token.connect(owner).enableTrading()
+            await token.connect(user1).transfer(user2.address, transferAmount);
+            const fees = await token.totalFees();
+            const burnAmount = fees.div(10);
+            console.log({fees, burnAmount})
+            await token.connect(user1).deliver(burnAmount);
+            expect(await token.totalFees()).to.be.equal(fees.add(burnAmount));
           })
           it("should succeed to send funds to excluded and non excluded should have a bit more due to reflections", async () => {
             const { token, owner, user1, user2 } = await loadFixture(deployTokenFixture);
@@ -456,6 +521,34 @@ describe("Token contract", function () {
         const ownerBalance = await ethers.provider.getBalance(owner.address)
         await routerInstance.connect(owner).swapExactTokensForETHSupportingFeeOnTransferTokens(ethers.utils.parseUnits("100000000", "gwei"), 0, [token.address, routerInstance.WETH()], owner.address, ethers.constants.MaxUint256)
         expect(await ethers.provider.getBalance(owner.address)).to.be.greaterThan(ownerBalance)
+      })
+    })
+
+    describe("Miscelanious", () => {
+      it("should clear stuck ETH balance", async() => {
+        const { token, owner, user1, user2, marketing } = await loadFixture(deployTokenFixture);
+        const marketingBalance = await ethers.provider.getBalance(marketing.address)
+        await user1.sendTransaction({to: token.address, value: ethers.utils.parseUnits("1", "ether")})
+        expect(await ethers.provider.getBalance(token.address)).to.be.equal(ethers.utils.parseUnits("1", "ether"))
+
+        await token.connect(user2).clearStuckBalance()
+
+        expect(await ethers.provider.getBalance(token.address)).to.be.equal(0)
+        expect(await ethers.provider.getBalance(marketing.address)).to.be.equal(marketingBalance.add(ethers.utils.parseUnits("1", "ether")))
+      })
+
+      it("should retrieve stuck tokens", async() => {
+        const { token, owner, marketing } = await loadFixture(deployTokenFixture);
+
+        const testToken = await ethers.getContractFactory("TestToken", owner);
+        const testTokenInstance = await testToken.deploy(); 
+        await testTokenInstance.deployed();
+
+        await testTokenInstance.connect(owner).transfer(token.address, ethers.utils.parseUnits("100", "ether"));
+        expect(await testTokenInstance.balanceOf(token.address)).to.be.equal(ethers.utils.parseUnits("100", "ether"))
+        await token.claimERCtokens(testTokenInstance.address);
+        expect(await testTokenInstance.balanceOf(token.address)).to.be.equal(0)
+        expect(await testTokenInstance.balanceOf(marketing.address)).to.be.equal(ethers.utils.parseUnits("100", "ether"))
       })
     })
 });
