@@ -3,8 +3,6 @@ import  hre, { ethers } from 'hardhat';
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 
-
-
 const LOSSLESS_ROLE = keccak256(toUtf8Bytes("LOSSLESS"));
 const WALLET_ROLE = keccak256(toUtf8Bytes("WALLET"));
 const BOT_ROLE = keccak256(toUtf8Bytes("BOT"));
@@ -16,8 +14,6 @@ const keyHash = '0x69111cecadeb2df9a8e26fa95ee9b81606b9d4c9c0b6956fca7204f457ec1
 const key = '0x52617265416e746971756974696573546f6b656e41646d696e53656372657432303232'
 const botWallet = '0x51EeAb5b780A6be4537eF76d829CC88E98Bc71e5'
 const maxAmount = ethers.utils.parseUnits("2500000000", "wei")
-
-
 
 describe("Token contract", function () {
     async function deployTokenFixture() {
