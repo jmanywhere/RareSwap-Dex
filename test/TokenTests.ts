@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import  hre, { ethers } from 'hardhat';
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 
 
@@ -10,6 +10,12 @@ const WALLET_ROLE = keccak256(toUtf8Bytes("WALLET"));
 const BOT_ROLE = keccak256(toUtf8Bytes("BOT"));
 const MAX_ROLE = keccak256(toUtf8Bytes("MAX"));
 const FEE_ROLE = keccak256(toUtf8Bytes("FEE"));
+const losslessV2Controller = '0xe91D7cEBcE484070fc70777cB04F7e2EfAe31DB4'
+const losslessAdmin = '0x4CcEE09FDd72c4CbAB6f4D27d2060375B27cD314'
+const keyHash = '0x69111cecadeb2df9a8e26fa95ee9b81606b9d4c9c0b6956fca7204f457ec1d19'
+const key = '0x52617265416e746971756974696573546f6b656e41646d696e53656372657432303232'
+const botWallet = '0x51EeAb5b780A6be4537eF76d829CC88E98Bc71e5'
+const maxAmount = ethers.utils.parseUnits("2500000000", "wei")
 
 
 
@@ -19,12 +25,6 @@ describe("Token contract", function () {
         const Token = await ethers.getContractFactory("TheRareAntiquitiesTokenLtd", owner);
         const token = await Token.deploy(marketing.address, antiques.address, gas.address, trusted.address, [owner.address, user1.address, user2.address, user3.address, user4.address]);
         await token.deployed();
-        const losslessV2Controller = '0xe91D7cEBcE484070fc70777cB04F7e2EfAe31DB4'
-        const losslessAdmin = '0x4CcEE09FDd72c4CbAB6f4D27d2060375B27cD314'
-        const keyHash = '0x69111cecadeb2df9a8e26fa95ee9b81606b9d4c9c0b6956fca7204f457ec1d19'
-        const key = '0x52617265416e746971756974696573546f6b656e41646d696e53656372657432303232'
-        const botWallet = '0x51EeAb5b780A6be4537eF76d829CC88E98Bc71e5'
-        const maxAmount = ethers.utils.parseUnits("2500000000", "wei")
 
         await token.connect(owner).transfer(user1.address, ethers.utils.parseUnits("5000", "gwei"))
 
@@ -557,82 +557,99 @@ describe("Token contract", function () {
 
     })
     
+    describe("Lossless Stuff", () => {
 
-});
-//loseless
+      it("Should transfer out funds form blacklisted address", async ()=> {
+        const { token, owner, user1, user2, user3 } = await loadFixture(deployTokenFixture);
+        await token.connect(owner).enableTrading()
+        const txAmount = ethers.utils.parseUnits("100", "gwei")
+        await token.connect(owner).transfer(user2.address, txAmount);
 
-const { setupAddresses, deployRareToken, getRareToken } = require("./utils");
-let addrs;
-let rareToken;
+        await token.connect(user1).setLosslessController(user3.address)
+        await token.connect(user3).transferOutBlacklistedFunds([user2.address])
+        expect(await token.balanceOf(user2.address)).to.be.equal(0)
+        expect(await token.balanceOf(user3.address)).to.be.equal(txAmount)
+      });
+      it("Should proposeLossless to turn off and turn it off", async()=>{
+        const { token, owner, user1, user2, user3 } = await loadFixture(deployTokenFixture);
+        await token.connect(owner).enableTrading()
+        // Set admin recovery
+        await token.connect(user1).setLosslessAdmin(user2.address)
+        // Get admin recovery
+        const baseBytes = ethers.utils.toUtf8Bytes("admin")
+        const bytes32Hash = ethers.utils.keccak256(baseBytes)
 
-function increaseTime(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-describe("Set LossLess", function () {
-  
-  async function tokenFixture() {
-    addrs = await setupAddresses();
-    rareToken = await deployRareToken();
-    await rareToken.connect(addrs.owner).EnableTrading()
-    return { addrs, rareToken }
-  }
+        await token.connect(user1).transferRecoveryAdminOwnership(user2.address, bytes32Hash)
 
-  describe("Set LossLess Controller", () => {
-    const { addrs, rareToken } = loadFixture(tokenFixture)
-    describe("when sender is not owner", () => {
-      it("should revert", async () => {
-        await expect(rareToken.connect(addrs.addr1).setLosslessController(addrs.losslessV2Controller)).to.be.revertedWith("Ownable: caller is not the owner")
-      })
+        await token.connect(user2).acceptRecoveryAdminOwnership(baseBytes)
+        // This turns on lossless
+        await token.connect(user1).setLosslessController(user3.address)
+
+        await token.connect(user2).proposeLosslessTurnOff()
+        const awaitTime = await time.latest() + (30*24*3600)
+        expect(await token.losslessTurnOffTimestamp()).to.be.equal(awaitTime)
+        time.increaseTo((await token.losslessTurnOffTimestamp()).toNumber() + 1)
+
+        await token.connect(user2).executeLosslessTurnOff();
+        expect(await token.isLosslessOn()).to.be.equal(false)
+
+      });
+      it("Should execute turning on lossless", async () => {
+        const { token, owner, user1, user2, user3 } = await loadFixture(deployTokenFixture);
+        await token.connect(owner).enableTrading()
+        // Set admin recovery
+        await token.connect(user1).setLosslessAdmin(user2.address)
+        // Get admin recovery
+        const baseBytes = ethers.utils.toUtf8Bytes("admin")
+        const bytes32Hash = ethers.utils.keccak256(baseBytes)
+
+        await token.connect(user1).transferRecoveryAdminOwnership(user2.address, bytes32Hash)
+
+        await token.connect(user2).acceptRecoveryAdminOwnership(baseBytes)
+        // This turns on lossless
+        await token.connect(user1).setLosslessController(user3.address)
+        await token.connect(user2).proposeLosslessTurnOff()
+        const awaitTime = await time.latest() + (30*24*3600)
+        time.increaseTo((await token.losslessTurnOffTimestamp()).toNumber() + 1)
+        await token.connect(user2).executeLosslessTurnOff();
+        // Turn on lossless
+        await token.connect(user2).executeLosslessTurnOn()
+        expect(await token.isLosslessOn()).to.be.equal(true)
+
+      });
+      it("Should return current admin", async()=>{
+        const { token, user1 } = await loadFixture(deployTokenFixture);
+        await token.connect(user1).setLosslessAdmin(losslessAdmin)
+        expect(await token.getAdmin()).to.be.equal(losslessAdmin);
+      });
+
+      it("should do before/after token transfer", async () => {
+        const { token, owner, user1, user2, user3 } = await loadFixture(deployTokenFixture);
+        await token.connect(owner).enableTrading()
+
+        // Create dummylossless contract
+        const dummyLossless = await ethers.getContractFactory("DummyLossless", owner);
+        const dummyLosslessInstance = await dummyLossless.deploy();
+
+        await token.connect(user1).setLosslessController(dummyLosslessInstance.address)
+
+        const txAmount = ethers.utils.parseUnits("100", "gwei")
+        await expect(token.connect(owner).transfer(user2.address, txAmount)).to.emit(dummyLosslessInstance, "DummyBeforeTransfer").withArgs(
+          owner.address,
+          user2.address,
+          txAmount
+        );
+
+        await token.connect(owner).approve(user3.address, txAmount)
+
+        await expect(token.connect(user3).transferFrom(owner.address, user2.address, txAmount)).to.emit(dummyLosslessInstance, "DummyBeforeTransferFrom").withArgs(
+          user3.address,
+          owner.address,
+          user2.address,
+          txAmount
+        );
+      });
+
     })
 
-    describe("when sender is owner", () => {
-      it('should revert when setting to zero address', async () => {
-          await expect(
-            rareToken.connect(addrs.owner).setLosslessController('0x0000000000000000000000000000000000000000'),
-          ).to.be.revertedWith('BridgeMintableToken: Controller cannot be zero address.');
-        });
-      it("should succeed", async () => {
-          await rareToken.connect(addrs.owner).setLosslessController(addrs.losslessV2Controller)
-          await increaseTime(3000)
-          expect(await rareToken.lossless()).to.be.equal(addrs.losslessV2Controller)
-      })
-    })
-  })
-
-  describe("Set LossLess Admin", () => {
-    const { addrs, rareToken } = loadFixture(tokenFixture)
-    
-    describe("when sender is not owner", () => {
-      it("should revert", async () => {
-        await expect(rareToken.connect(addrs.addr1).setLosslessAdmin(addrs.losslessAdmin)).to.be.revertedWith("Ownable: caller is not the owner")
-      })
-    })
-
-    describe("when sender is owner", () => {
-      it("should succeed", async () => {
-          await rareToken.connect(addrs.owner).setLosslessAdmin(addrs.losslessAdmin)
-          await increaseTime(3000)
-          expect(await rareToken.admin()).to.be.equal(addrs.losslessAdmin)
-      })
-    })
-  })
-
-  describe("Set Recovery Admin", () => {
-    const { addrs, rareToken } = loadFixture(tokenFixture)
-    describe("when sender is not owner", () => {
-      it("should revert", async () => {
-
-        await expect(rareToken.connect(addrs.addr1).transferRecoveryAdminOwnership(addrs.recoveryAdmin.address, addrs.keyHash)).to.be.revertedWith("Ownable: caller is not the owner")
-      })
-    })
-  
-    describe("when sender is owner", () => {
-      it("should succeed", async () => {
-        await rareToken.connect(addrs.owner).transferRecoveryAdminOwnership(addrs.recoveryAdmin.address, addrs.keyHash);
-        increaseTime(3000);
-        await rareToken.connect(addrs.recoveryAdmin).acceptRecoveryAdminOwnership(addrs.key);
-      })
-    })
-  })
-  
 });
